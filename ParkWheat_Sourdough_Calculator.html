@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Park Wheat Sourdough Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #36B3AF;
+    --teal-dark: #2a9490;
+    --teal-light: #e8f7f7;
+    --teal-mid: #b8e8e7;
+    --cream: #FDFAF6;
+    --cream-dark: #F4EFE8;
+    --cream-border: #E8E0D5;
+    --black: #1A1A1A;
+    --text: #2C2C2C;
+    --text-mid: #555;
+    --text-light: #888;
+    --warning: #C8651A;
+    --warning-bg: #FFF3E8;
+    --success: #2E8B57;
+    --success-bg: #EBF7F1;
+    --white: #FFFFFF;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--white);
+    border-bottom: 2px solid var(--teal);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(54,179,175,0.10);
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .brand-name {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--black);
+    text-transform: uppercase;
+  }
+
+  .brand-sep {
+    width: 1px;
+    height: 16px;
+    background: var(--cream-border);
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .brand-sub {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--teal);
+    text-transform: uppercase;
+  }
+
+  .header-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mode-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-light);
+    text-transform: uppercase;
+  }
+
+  .toggle-wrap {
+    display: flex;
+    background: var(--cream-dark);
+    border: 1px solid var(--cream-border);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .toggle-btn {
+    padding: 5px 14px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: transparent;
+    color: var(--text-light);
+    transition: all 0.2s;
+  }
+
+  .toggle-btn.active {
+    background: var(--teal);
+    color: white;
+    box-shadow: 0 2px 6px rgba(54,179,175,0.35);
+  }
+
+  /* ── LAYOUT ── */
+  .app-body {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--white);
+    border-right: 1px solid var(--cream-border);
+    padding: 24px 20px;
+    overflow-y: auto;
+    position: sticky;
+    top: 64px;
+    height: calc(100vh - 64px);
+  }
+
+  .sidebar-section {
+    margin-bottom: 24px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2.5px;
+    color: var(--teal);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--teal-mid);
+  }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .input-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .input-sub {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text-light);
+    display: block;
+    margin-top: 1px;
+  }
+
+  .input-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  input[type="number"] {
+    width: 72px;
+    padding: 6px 8px;
+    border: 1.5px solid var(--cream-border);
+    border-radius: var(--radius-sm);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--cream);
+    text-align: right;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--teal);
+    background: var(--white);
+  }
+
+  .unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    min-width: 24px;
+  }
+
+  /* Range slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--cream-border);
+    outline: none;
+    margin: 6px 0 2px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--teal);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(54,179,175,0.4);
+    transition: transform 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .range-row {
+    margin-bottom: 12px;
+  }
+
+  .range-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .range-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--teal-dark);
+    background: var(--teal-light);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  /* Checkbox toggle */
+  .check-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: var(--cream);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--cream-border);
+    cursor: pointer;
+  }
+
+  .check-row:hover { border-color: var(--teal-mid); }
+
+  .check-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .check-sublabel {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 1px;
+  }
+
+  .switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .switch input { opacity: 0; width: 0; height: 0; }
+
+  .switch-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--cream-border);
+    border-radius: 22px;
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+
+  .switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .switch input:checked + .switch-slider { background: var(--teal); }
+  .switch input:checked + .switch-slider::before { transform: translateX(18px); }
+
+  /* Schedule inputs */
+  input[type="time"], input[type="date"] {
+    padding: 6px 8px;
+    border: 1.5px solid var(--cream-border);
+    border-radius: var(--radius-sm);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--cream);
+    transition: border-color 0.2s;
+  }
+
+  input[type="time"]:focus, input[type="date"]:focus {
+    outline: none;
+    border-color: var(--teal);
+    background: var(--white);
+  }
+
+  select {
+    padding: 6px 10px;
+    border: 1.5px solid var(--cream-border);
+    border-radius: var(--radius-sm);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--cream);
+    cursor: pointer;
+  }
+
+  select:focus { outline: none; border-color: var(--teal); }
+
+  /* Print button */
+  .print-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--teal);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 3px 10px rgba(54,179,175,0.3);
+    margin-top: 4px;
+  }
+
+  .print-btn:hover {
+    background: var(--teal-dark);
+    box-shadow: 0 4px 14px rgba(54,179,175,0.45);
+    transform: translateY(-1px);
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main-content {
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  .content-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .content-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--black);
+    letter-spacing: -0.5px;
+  }
+
+  .content-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
+  .content-meta {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-align: right;
+  }
+
+  /* ── CARDS ── */
+  .cards-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--cream-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .stat-card.accent {
+    background: var(--teal);
+    border-color: var(--teal-dark);
+  }
+
+  .stat-card.accent .stat-label { color: rgba(255,255,255,0.75); }
+  .stat-card.accent .stat-value { color: white; }
+  .stat-card.accent .stat-unit { color: rgba(255,255,255,0.8); }
+
+  .stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-light);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--black);
+    line-height: 1;
+  }
+
+  .stat-unit {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  /* ── TABLES ── */
+  .section-card {
+    background: var(--white);
+    border: 1px solid var(--cream-border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .section-card-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--cream-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--cream);
+  }
+
+  .section-card-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--teal-dark);
+    text-transform: uppercase;
+  }
+
+  .section-card-meta {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-light);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+    padding: 8px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--cream-border);
+    background: var(--cream);
+  }
+
+  th:last-child, td:last-child { text-align: right; }
+
+  td {
+    padding: 10px 20px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--cream-dark);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .td-component {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .td-sub {
+    font-size: 10px;
+    color: var(--text-light);
+    font-weight: 400;
+    display: block;
+  }
+
+  .td-weight {
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--black);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .td-pct {
+    font-weight: 600;
+    color: var(--teal-dark);
+    font-size: 12px;
+  }
+
+  .td-note {
+    font-size: 11px;
+    color: var(--text-mid);
+    max-width: 280px;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .pill-teal { background: var(--teal-light); color: var(--teal-dark); }
+  .pill-warn { background: var(--warning-bg); color: var(--warning); }
+  .pill-green { background: var(--success-bg); color: var(--success); }
+
+  tr.subtotal td {
+    background: var(--teal-light);
+    font-weight: 700;
+    border-top: 1px solid var(--teal-mid);
+  }
+
+  tr.total-row td {
+    background: var(--teal);
+    color: white;
+    font-weight: 800;
+  }
+
+  /* ── SCHEDULE ── */
+  .schedule-grid {
+    padding: 8px 0;
+  }
+
+  .schedule-day-header {
+    padding: 8px 20px 6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--teal-dark);
+    text-transform: uppercase;
+    background: var(--teal-light);
+    border-top: 1px solid var(--teal-mid);
+    border-bottom: 1px solid var(--teal-mid);
+  }
+
+  .schedule-row {
+    display: grid;
+    grid-template-columns: 100px 160px 1fr;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--cream-dark);
+    gap: 16px;
+  }
+
+  .schedule-row:last-child { border-bottom: none; }
+
+  .schedule-row.critical {
+    background: var(--warning-bg);
+  }
+
+  .schedule-row.bake {
+    background: var(--teal-light);
+  }
+
+  .sched-time {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--black);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sched-step {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .sched-detail {
+    font-size: 11px;
+    color: var(--text-mid);
+    line-height: 1.5;
+  }
+
+  /* ── PROCESS SECTION ── */
+  .process-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .process-card {
+    background: var(--white);
+    border: 1px solid var(--cream-border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .process-card-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--teal-dark);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--teal-mid);
+  }
+
+  .process-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+
+  .process-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--teal);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .process-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .process-text strong { font-weight: 700; color: var(--black); }
+
+  /* Alert banner */
+  .alert-banner {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .alert-banner.warn {
+    background: var(--warning-bg);
+    border: 1px solid rgba(200,101,26,0.25);
+    color: var(--warning);
+  }
+
+  .alert-banner.info {
+    background: var(--teal-light);
+    border: 1px solid var(--teal-mid);
+    color: var(--teal-dark);
+  }
+
+  .alert-icon { font-size: 14px; flex-shrink: 0; }
+  .alert-text { font-weight: 600; }
+  .alert-text span { font-weight: 400; display: block; margin-top: 2px; color: inherit; opacity: 0.85; }
+
+  /* Two column layout for tables */
+  .two-col-tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  /* Rules list */
+  .rules-list {
+    padding: 4px 20px 16px;
+  }
+
+  .rule-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--cream-dark);
+  }
+
+  .rule-item:last-child { border-bottom: none; }
+
+  .rule-num {
+    font-size: 10px;
+    font-weight: 800;
+    color: white;
+    background: var(--teal);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .rule-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .rule-text strong { color: var(--black); font-weight: 700; }
+
+  /* ── PRINT ── */
+  @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    .site-header, .sidebar { display: none !important; }
+    .app-body { grid-template-columns: 1fr !important; }
+    .main-content { padding: 16px !important; }
+    .section-card { page-break-inside: avoid; }
+    .cards-row { grid-template-columns: repeat(4, 1fr) !important; }
+    .process-grid { grid-template-columns: 1fr 1fr !important; }
+    .two-col-tables { grid-template-columns: 1fr 1fr !important; }
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--cream-border);
+    margin: 4px 0 16px;
+  }
+
+  /* Mode banner */
+  .mode-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .mode-banner.v95 {
+    background: linear-gradient(90deg, var(--teal-light), var(--cream));
+    border: 1px solid var(--teal-mid);
+    color: var(--teal-dark);
+  }
+
+  .mode-banner.v90 {
+    background: linear-gradient(90deg, #FFF8EC, var(--cream));
+    border: 1px solid #F0D8A8;
+    color: #8B6420;
+  }
+
+  .mode-badge {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+
+  .mode-desc { font-weight: 500; color: inherit; opacity: 0.85; }
+
+  /* Levain ratio display */
+  .levain-ratio {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--teal-light);
+    border: 1px solid var(--teal-mid);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-top: 6px;
+  }
+
+  .ratio-label { font-size: 10px; font-weight: 600; color: var(--text-light); }
+  .ratio-val { font-size: 13px; font-weight: 800; color: var(--teal-dark); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-brand">
+    <span class="brand-name">Corbeaux</span>
+    <span class="brand-sep"></span>
+    <span class="brand-sub">Sourdough Formula</span>
+  </div>
+  <div class="header-mode">
+    <span class="mode-label">Formulation</span>
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" id="btn95" onclick="setMode('95')">95/5</button>
+      <button class="toggle-btn" id="btn90" onclick="setMode('90')">90/10</button>
+    </div>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+
+    <!-- BATCH SIZE -->
+    <div class="sidebar-section">
+      <div class="section-label">Batch Size</div>
+      <div class="input-row">
+        <div class="input-label">
+          Total Dough Weight
+          <span class="input-sub">Default: 5,080g (5 loaves)</span>
+        </div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Target (g)</span>
+        <div class="input-field">
+          <input type="number" id="totalDough" value="5080" step="100" min="1000" max="20000" oninput="recalc()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Loaf Size (g)</span>
+        <div class="input-field">
+          <input type="number" id="loafSize" value="1010" step="50" min="400" max="2000" oninput="recalc()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOUR BLEND -->
+    <div class="sidebar-section">
+      <div class="section-label">Flour Blend</div>
+      <div class="range-row">
+        <div class="range-header">
+          <span class="input-label">Park Wheat %</span>
+          <span class="range-val" id="wheatPctDisplay">95%</span>
+        </div>
+        <input type="range" id="wheatPct" min="80" max="100" value="95" step="1" oninput="syncRye(); recalc();">
+      </div>
+      <div class="range-row">
+        <div class="range-header">
+          <span class="input-label">Rye (Scald) %</span>
+          <span class="range-val" id="ryePctDisplay">5%</span>
+        </div>
+        <input type="range" id="ryePct" min="0" max="20" value="5" step="1" oninput="syncWheat(); recalc();">
+      </div>
+    </div>
+
+    <!-- HYDRATION -->
+    <div class="sidebar-section">
+      <div class="section-label">Hydration</div>
+      <div class="range-row">
+        <div class="range-header">
+          <span class="input-label">Total Hydration %</span>
+          <span class="range-val" id="hydrationDisplay">82%</span>
+        </div>
+        <input type="range" id="hydration" min="70" max="90" value="82" step="1" oninput="document.getElementById('hydrationDisplay').textContent = this.value + '%'; recalc();">
+      </div>
+      <div class="range-row">
+        <div class="range-header">
+          <span class="input-label">Bassinage Reserve %</span>
+          <span class="range-val" id="bassinageDisplay">7%</span>
+        </div>
+        <input type="range" id="bassinage" min="3" max="15" value="7" step="1" oninput="document.getElementById('bassinageDisplay').textContent = this.value + '%'; recalc();">
+      </div>
+      <div class="input-row">
+        <span class="input-label">Levain Inoculation %</span>
+        <div class="input-field">
+          <input type="number" id="levainPct" value="16" step="1" min="5" max="30" oninput="recalc()">
+          <span class="unit">%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEVAIN -->
+    <div class="sidebar-section">
+      <div class="section-label">Levain Build</div>
+      <div class="input-row">
+        <span class="input-label">Starter Amount (g)</span>
+        <div class="input-field">
+          <input type="number" id="starterG" value="30" step="5" min="10" max="100" oninput="recalc()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SALT -->
+    <div class="sidebar-section">
+      <div class="section-label">Salt</div>
+      <div class="range-row">
+        <div class="range-header">
+          <span class="input-label">Salt %</span>
+          <span class="range-val" id="saltDisplay">2.2%</span>
+        </div>
+        <input type="range" id="saltPct" min="1.5" max="3.0" value="2.2" step="0.1" oninput="document.getElementById('saltDisplay').textContent = parseFloat(this.value).toFixed(1) + '%'; recalc();">
+      </div>
+    </div>
+
+    <!-- ALTUS -->
+    <div class="sidebar-section">
+      <div class="section-label">Altus</div>
+      <label class="check-row" onclick="toggleAltus()">
+        <div>
+          <div class="check-label">Include Altus</div>
+          <div class="check-sublabel">Mandatory for 82%+ hydration</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="altusToggle" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </label>
+      <div id="altusInputs">
+        <div class="input-row">
+          <span class="input-label">Altus % of Flour</span>
+          <div class="input-field">
+            <input type="number" id="altusPct" value="5.3" step="0.1" min="2" max="12" oninput="recalc()">
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="input-row">
+          <span class="input-label">Soak Ratio</span>
+          <div class="input-field">
+            <input type="number" id="altusRatio" value="2" step="0.1" min="1" max="3" oninput="recalc()">
+            <span class="unit">×</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="sidebar-section">
+      <div class="section-label">Bake Schedule</div>
+      <div class="input-row" style="margin-bottom:8px;">
+        <span class="input-label">Bake Day</span>
+        <select id="bakeDay" onchange="recalc()">
+          <option value="0">Today</option>
+          <option value="1" selected>Tomorrow</option>
+          <option value="2">In 2 Days</option>
+          <option value="3">In 3 Days</option>
+        </select>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Bake Time</span>
+        <input type="time" id="bakeTime" value="09:00" onchange="recalc()">
+      </div>
+      <div class="input-row" style="margin-top:6px;">
+        <span class="input-label">Cold Proof Duration</span>
+        <div class="input-field">
+          <input type="number" id="coldProof" value="13.5" step="0.5" min="12" max="18" oninput="recalc()">
+          <span class="unit">hr</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEMPS -->
+    <div class="sidebar-section">
+      <div class="section-label">Starter Status</div>
+      <div class="input-row"><span class="input-label">State Today</span>
+        <select id="starterState" onchange="recalc()">
+          <option value="active">Active (peaks 4–6h)</option>
+          <option value="warm">Warm-stored, recent feeds</option>
+          <option value="fridge_short">Fridge &lt; 1 week</option>
+          <option value="fridge_long" selected>Fridge 1+ week</option>
+          <option value="weak">Weak / underperforming</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Bake Profile</div>
+      <div class="input-row">
+        <span class="input-label">Phase 1 Temp</span>
+        <div class="input-field">
+          <input type="number" id="phase1Temp" value="500" step="5" min="450" max="550" oninput="recalc()">
+          <span class="unit">°F</span>
+        </div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Phase 1 Duration</span>
+        <div class="input-field">
+          <input type="number" id="phase1Min" value="18" step="1" min="12" max="30" oninput="recalc()">
+          <span class="unit">min</span>
+        </div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Phase 2 Temp</span>
+        <div class="input-field">
+          <input type="number" id="phase2Temp" value="415" step="5" min="380" max="460" oninput="recalc()">
+          <span class="unit">°F</span>
+        </div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Phase 2 Duration</span>
+        <div class="input-field">
+          <input type="number" id="phase2Min" value="20" step="1" min="15" max="40" oninput="recalc()">
+          <span class="unit">min</span>
+        </div>
+      </div>
+      <div class="input-row">
+        <span class="input-label">Target Internal Temp</span>
+        <div class="input-field">
+          <input type="number" id="pullTemp" value="205" step="1" min="195" max="215" oninput="recalc()">
+          <span class="unit">°F</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()">⎙ Print Bake Sheet</button>
+    <div style="margin-top: 10px;">
+      <button class="print-btn" style="background: var(--cream-dark); color: var(--teal-dark); box-shadow: none; border: 1px solid var(--teal-mid);" onclick="resetDefaults()">↺ Reset Defaults</button>
+    </div>
+
+  </aside>
+
+  <!-- ══ MAIN CONTENT ══ -->
+  <main class="main-content" id="mainContent">
+
+    <div class="content-header">
+      <div>
+        <div class="content-title" id="mainTitle">Park Wheat + Rye Sourdough</div>
+        <div class="content-subtitle" id="mainSubtitle">95% PARK WHEAT / 5% RYE SCALD · 100% FRESH-MILLED · HIGH ALTITUDE (CALGARY, AB)</div>
+      </div>
+      <div class="content-meta">
+        <span id="loafCount">5 loaves</span><br>
+        <span id="loafSizeDisplay">~1,010g each</span>
+      </div>
+    </div>
+
+    <!-- MODE BANNER -->
+    <div id="modeBanner" class="mode-banner v95">
+      <span class="mode-badge" id="modeBadgeText">95/5</span>
+      <span>·</span>
+      <span class="mode-desc" id="modeDescText">Open Crumb Protocol — True autolyse, 2 coil folds, 35–40% bulk rise, moderate shaping tension.</span>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="alertZone"></div>
+
+    <!-- STAT CARDS -->
+    <div class="cards-row">
+      <div class="stat-card accent">
+        <div class="stat-label">Total Dough</div>
+        <div class="stat-value" id="statTotalDough">5,080</div>
+        <div class="stat-unit">grams</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Hydration</div>
+        <div class="stat-value" id="statHydration">82</div>
+        <div class="stat-unit">percent</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Flour</div>
+        <div class="stat-value" id="statTotalFlour">2,460</div>
+        <div class="stat-unit">grams</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Loaves</div>
+        <div class="stat-value" id="statLoaves">5</div>
+        <div class="stat-unit" id="statLoafG">× ~1,010g</div>
+      </div>
+    </div>
+
+    <!-- FORMULATION TABLE -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">Formulation</span>
+        <span class="section-card-meta" id="formulationMeta">Baker's % · Total Flour = 100%</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Stage / Component</th>
+            <th>Weight</th>
+            <th>Baker's %</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="formulationBody">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- LEVAIN + SCALD side by side -->
+    <div class="two-col-tables">
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Levain Build</span>
+          <span class="section-card-meta">Peak in 6h @ 21–22°C</span>
+        </div>
+        <div style="padding: 16px 20px;">
+          <div id="levainRatioDisplay" class="levain-ratio">
+            <span class="ratio-label">Ratio</span>
+            <span class="ratio-val">1 : 6 : 6</span>
+          </div>
+          <table style="margin-top: 12px;">
+            <tbody id="levainBody"></tbody>
+          </table>
+          <div style="margin-top: 12px; padding: 10px 12px; background: var(--teal-light); border-radius: var(--radius-sm); font-size: 11px; color: var(--teal-dark); font-weight: 600; line-height: 1.5;">
+            Use at <strong>flat top</strong> — dome just flattened, not collapsed. Visual cue only. Clock is secondary.
+          </div>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-card-header">
+          <span class="section-card-title">Rye Scald</span>
+          <span class="section-card-meta">Must cool completely before mix</span>
+        </div>
+        <div style="padding: 16px 20px;">
+          <table>
+            <tbody id="scaldBody"></tbody>
+          </table>
+          <div style="margin-top: 12px; padding: 10px 12px; background: var(--warning-bg); border-radius: var(--radius-sm); font-size: 11px; color: var(--warning); font-weight: 600; line-height: 1.5;">
+            Pour boiling water over rye. Mix vigorously. Cover plastic wrap to surface. <strong>Cool to room temp before adding to dough.</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">Bake Schedule</span>
+        <span class="section-card-meta" id="schedMeta">Anchored: 6h Levain Peak + 13.5h Cold Proof</span>
+      </div>
+      <div class="schedule-grid" id="scheduleGrid"></div>
+    </div>
+
+    <div class="section-card" id="starterRehabCard">
+      <div class="section-card-header"><span class="section-card-title">Starter Prep — Days Before Bake</span><span class="section-card-meta" id="rehabMeta">Recovery ladder for fresh-milled Park Wheat starter</span></div>
+      <div id="rehabBody"></div>
+    </div>
+
+    <!-- PROCESS NOTES -->
+    <div class="process-grid" id="processGrid"></div>
+
+    <!-- CRITICAL RULES -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">Never Again — Critical Rules</span>
+        <span class="section-card-meta">Hard-won. Override all general advice.</span>
+      </div>
+      <div class="rules-list" id="rulesBody"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+let currentMode = '95';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('btn95').classList.toggle('active', mode === '95');
+  document.getElementById('btn90').classList.toggle('active', mode === '90');
+
+  // Auto-set defaults for mode
+  if (mode === '95') {
+    document.getElementById('wheatPct').value = 95;
+    document.getElementById('ryePct').value = 5;
+    document.getElementById('phase2Temp').value = 415;
+  } else {
+    document.getElementById('wheatPct').value = 90;
+    document.getElementById('ryePct').value = 10;
+    document.getElementById('phase2Temp').value = 425;
+  }
+  syncRye();
+  recalc();
+}
+
+function syncRye() {
+  const w = parseInt(document.getElementById('wheatPct').value);
+  const rye = 100 - w;
+  document.getElementById('ryePct').value = Math.min(20, Math.max(0, rye));
+  document.getElementById('wheatPctDisplay').textContent = w + '%';
+  document.getElementById('ryePctDisplay').textContent = rye + '%';
+}
+
+function syncWheat() {
+  const r = parseInt(document.getElementById('ryePct').value);
+  const wheat = 100 - r;
+  document.getElementById('wheatPct').value = Math.min(100, Math.max(80, wheat));
+  document.getElementById('wheatPctDisplay').textContent = wheat + '%';
+  document.getElementById('ryePctDisplay').textContent = r + '%';
+}
+
+function toggleAltus() {
+  const cb = document.getElementById('altusToggle');
+  // Toggle is handled by label click, let native checkbox handle state
+  setTimeout(() => {
+    document.getElementById('altusInputs').style.display = cb.checked ? '' : 'none';
+    recalc();
+  }, 10);
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString();
+}
+
+function fmtPct(n) {
+  return n.toFixed(1) + '%';
+}
+
+function addTime(baseDate, hoursToAdd) {
+  const d = new Date(baseDate.getTime() + hoursToAdd * 3600000);
+  return d;
+}
+
+function formatTime(d) {
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hh = h % 12 || 12;
+  const mm = m.toString().padStart(2, '0');
+  return `${hh}:${mm} ${ampm}`;
+}
+
+function formatDate(d) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return days[d.getDay()];
+}
+
+function getLevainRatio(windowHours) {
+  // Adjust ratio to match desired fermentation window at 21-22°C
+  if (windowHours <= 6) return [1, 6, 6];
+  if (windowHours <= 7) return [1, 7, 7];
+  if (windowHours <= 8) return [1, 8, 8];
+  if (windowHours <= 9) return [1, 9, 9];
+  if (windowHours <= 10) return [1, 10, 10];
+  if (windowHours <= 11) return [1, 11, 11];
+  return [1, 12, 12];
+}
+
+function recalc() {
+  const totalDough = parseFloat(document.getElementById('totalDough').value) || 5080;
+  const loafSize = parseFloat(document.getElementById('loafSize').value) || 1010;
+  const wheatPct = parseFloat(document.getElementById('wheatPct').value) / 100;
+  const ryePct = parseFloat(document.getElementById('ryePct').value) / 100;
+  const hydrationTarget = parseFloat(document.getElementById('hydration').value) / 100;
+  const bassinage = parseFloat(document.getElementById('bassinage').value) / 100;
+  const levainPct = parseFloat(document.getElementById('levainPct').value) / 100;
+  const starterG = parseFloat(document.getElementById('starterG').value) || 30;
+  const saltPct = parseFloat(document.getElementById('saltPct').value) / 100;
+  const altusOn = document.getElementById('altusToggle').checked;
+  const altusPct = altusOn ? (parseFloat(document.getElementById('altusPct').value) || 5.3) / 100 : 0;
+  const altusRatio = altusOn ? (parseFloat(document.getElementById('altusRatio').value) || 2) : 0;
+
+  // ── TFW Solver ──
+  // Convention: TFW = main dough flour (wheat main + rye scald) = the "100%" base.
+  // Levain flour is added on top as % of TFW (default 16%).
+  // All ingredients scale as % of TFW except starterG which is a small fixed inoculum.
+  //
+  // Total dough composition:
+  //   = main wheat flour            : TFW × wheatPct
+  //   + rye flour (scald)           : TFW × ryePct
+  //   + levain flour (extra)        : TFW × levainPct
+  //   + total water                 : TFW × hydrationTarget
+  //   + salt                        : TFW × saltPct
+  //   + altus bread (extra mass)    : TFW × altusPct
+  //   + starter (small constant)    : starterG
+  //
+  // Note: wheatPct + ryePct = 1, so flour terms collapse to TFW (1 + levainPct).
+  // Solving:
+  //   totalDough = TFW × (1 + levainPct + hydrationTarget + saltPct + altusPct) + starterG
+  //   TFW = (totalDough − starterG) / (1 + levainPct + hydrationTarget + saltPct + altusPct)
+
+  const denom = 1 + levainPct + hydrationTarget + saltPct + altusPct;
+  let TFW = (totalDough - starterG) / denom;
+  TFW = Math.round(TFW);
+
+  // Compute all derived weights
+  const ryeFlour = Math.round(TFW * ryePct);
+  const wheatMainFlour = Math.round(TFW * wheatPct);
+  const levainFlour = Math.round(TFW * levainPct);
+  const levainWater = levainFlour;       // 1:1 hydration in the levain build
+  const levainTotal = starterG + levainFlour + levainWater;
+  const salt = Math.round(TFW * saltPct);
+  const altusG = altusOn ? Math.round(TFW * altusPct) : 0;
+  const altusWater = altusOn ? Math.round(altusG * altusRatio) : 0;
+  const scaldWater = Math.round(ryeFlour * 2);  // 1:2 flour:water in scald
+  const totalWater = Math.round(TFW * hydrationTarget);
+  const bassinageWater = Math.round(TFW * bassinage);
+  const waterI = totalWater - levainWater - scaldWater - altusWater - bassinageWater;
+
+  // Actual total (for verification — should match user's target)
+  const actualTotal = wheatMainFlour + ryeFlour + levainFlour + totalWater + salt + altusG + starterG;
+
+  // Loaf division
+  const loaves = Math.max(1, Math.round(actualTotal / loafSize));
+  const loafActual = Math.round(actualTotal / loaves);
+
+  // Levain ratio (auto-suggested based on flour:starter ratio)
+  const levainRatioMult = Math.max(2, Math.round(levainFlour / starterG));
+  const ratioStr = `1 : ${levainRatioMult} : ${levainRatioMult}`;
+
+  // Update stat cards
+  document.getElementById('statTotalDough').textContent = fmt(actualTotal);
+  document.getElementById('statHydration').textContent = Math.round(hydrationTarget * 100);
+  document.getElementById('statTotalFlour').textContent = fmt(TFW);
+  document.getElementById('statLoaves').textContent = loaves;
+  document.getElementById('statLoafG').textContent = `× ~${fmt(loafActual)}g`;
+  document.getElementById('loafCount').textContent = loaves + ' loaves';
+  document.getElementById('loafSizeDisplay').textContent = `~${fmt(loafActual)}g each`;
+
+  // Mode banner
+  const is95 = currentMode === '95';
+  const banner = document.getElementById('modeBanner');
+  banner.className = 'mode-banner ' + (is95 ? 'v95' : 'v90');
+  document.getElementById('modeBadgeText').textContent = is95 ? '95/5' : '90/10';
+  document.getElementById('modeDescText').textContent = is95
+    ? 'Open Crumb Protocol — True autolyse, 2 coil folds, 35–40% bulk rise, moderate shaping tension.'
+    : 'Standard Protocol — Fermentolyse, 3 coil folds, 30–35% bulk rise, high shaping tension.';
+
+  document.getElementById('mainSubtitle').textContent =
+    `${Math.round(wheatPct*100)}% PARK WHEAT / ${Math.round(ryePct*100)}% RYE SCALD · 100% FRESH-MILLED · HIGH ALTITUDE (CALGARY, AB)`;
+
+  // Levain ratio display
+  document.getElementById('levainRatioDisplay').innerHTML =
+    `<span class="ratio-label">Ratio</span><span class="ratio-val">${ratioStr}</span>`;
+
+  // Alerts
+  const alertZone = document.getElementById('alertZone');
+  const alerts = [];
+  if (waterI < 0) {
+    alerts.push({ type: 'warn', msg: 'Water I is negative.', sub: 'Reduce bassinage, scald water, or increase total hydration.' });
+  }
+  if (!altusOn && hydrationTarget >= 0.82) {
+    alerts.push({ type: 'warn', msg: 'Altus disabled at 82%+ hydration.', sub: 'Altus is the primary rheological stabilizer at this hydration. The dough will be significantly harder to manage.' });
+  }
+  if (parseFloat(document.getElementById('coldProof').value) > 18) {
+    alerts.push({ type: 'warn', msg: 'Cold proof exceeds 18-hour hard ceiling.', sub: 'Protease enzymes do not stop at fridge temp. Structural collapse (Frisbee Effect) becomes highly probable.' });
+  }
+  if (hydrationTarget > 0.88) {
+    alerts.push({ type: 'warn', msg: 'Hydration above 88% — extreme territory.', sub: 'Ensure altus is enabled and bassinage reserve is maximized.' });
+  }
+  alertZone.innerHTML = alerts.map(a => `
+    <div class="alert-banner ${a.type}">
+      <span class="alert-icon">${a.type === 'warn' ? '⚠' : 'ℹ'}</span>
+      <div class="alert-text">${a.msg}<span>${a.sub}</span></div>
+    </div>`).join('');
+
+  // ── FORMULATION TABLE ──
+  const fbody = document.getElementById('formulationBody');
+  const rows = [
+    { stage: 'LEVAIN', component: 'Park Wheat Starter', sub: '1:'+levainRatioMult+':'+levainRatioMult+' ratio', weight: levainTotal, pct: levainTotal/TFW*100, note: 'Peak in 6h @ 21–22°C. Use at flat top.' },
+    { stage: 'SCALD', component: 'Rye Flour (Fresh-Milled)', sub: 'Entire rye component', weight: ryeFlour, pct: ryeFlour/TFW*100, note: 'Pour boiling water over. Mix to porridge. Cool completely.' },
+    { stage: '', component: 'Boiling Water', sub: 'Scald water', weight: scaldWater, pct: scaldWater/TFW*100, note: 'Calgary altitude: boils at ~205°F. Still achieves gelatinization.' },
+  ];
+  if (altusOn) {
+    rows.push({ stage: 'ALTUS', component: 'Toasted Stale Bread', sub: 'Retrograded starch gel', weight: altusG, pct: altusG/TFW*100, note: `Soak in ${fmt(altusWater)}g boiling water. Mash. Cool fully.` });
+  }
+  rows.push(
+    { stage: 'DOUGH', component: 'Park Wheat Flour', sub: 'Fresh-milled, cooled to room temp', weight: wheatMainFlour, pct: wheatMainFlour/TFW*100, note: 'Mill fresh. Spread to cool. Measure flour temp before mixing.' },
+    { stage: '', component: 'Water I (Cold)', sub: '10–12°C / use ice if needed', weight: Math.max(0, waterI), pct: Math.max(0, waterI)/TFW*100, note: 'Cold water is mandatory. Fresh mill + scald = hot dough otherwise.' },
+    { stage: '', component: 'Water II (Bassinage)', sub: 'Levain dissolved into this', weight: bassinageWater, pct: bassinageWater/TFW*100, note: is95 ? 'Dissolve levain in bassinage. Add with salt + altus.' : 'Add slowly during final mix. Assess dough strength.' },
+    { stage: '', component: 'Fine Sea Salt', sub: 'Critical protease inhibitor', weight: salt, pct: salt/TFW*100, note: 'Dissolved into bassinage or added post-autolyse.' },
+    { stage: 'TOTAL', component: 'Total Dough', sub: loaves + ' loaves × ~' + fmt(loafActual) + 'g', weight: actualTotal, pct: null, note: '', isTotal: true }
+  );
+
+  fbody.innerHTML = rows.map(r => `
+    <tr class="${r.isTotal ? 'total-row' : ''}">
+      <td><span class="td-component">${r.component}</span>${r.stage ? `<span class="td-sub">${r.stage}${r.sub ? ' · '+r.sub : ''}</span>` : (r.sub ? `<span class="td-sub">${r.sub}</span>` : '')}</td>
+      <td><span class="${r.isTotal ? '' : 'td-weight'}">${fmt(r.weight)}g</span></td>
+      <td><span class="td-pct">${r.pct !== null ? fmtPct(r.pct) : '—'}</span></td>
+      <td><span class="td-note">${r.note}</span></td>
+    </tr>`).join('');
+
+  // ── LEVAIN TABLE ──
+  document.getElementById('levainBody').innerHTML = `
+    <tr><td class="td-component">Starter</td><td></td><td class="td-weight">${fmt(starterG)}g</td></tr>
+    <tr><td class="td-component">Park Wheat Flour</td><td></td><td class="td-weight">${fmt(levainFlour)}g</td></tr>
+    <tr><td class="td-component">Water (room temp)</td><td></td><td class="td-weight">${fmt(levainWater)}g</td></tr>
+    <tr class="subtotal"><td colspan="2">Yield (use ${fmt(levainTotal - starterG * 0)}g)</td><td class="td-weight">${fmt(levainTotal)}g</td></tr>`;
+
+  // ── SCALD TABLE ──
+  document.getElementById('scaldBody').innerHTML = `
+    <tr><td class="td-component">Rye Flour (fresh-milled)</td><td class="td-weight">${fmt(ryeFlour)}g</td></tr>
+    <tr><td class="td-component">Boiling Water (~205°F)</td><td class="td-weight">${fmt(scaldWater)}g</td></tr>
+    <tr class="subtotal"><td>Total Scald</td><td class="td-weight">${fmt(ryeFlour + scaldWater)}g</td></tr>`;
+
+  // ── SCHEDULE ──
+  buildSchedule(loaves);
+
+  // ── STARTER REHAB ──
+  buildRehab();
+
+  // ── PROCESS NOTES ──
+  buildProcessNotes();
+
+  // ── RULES ──
+  buildRules();
+}
+
+function buildSchedule(loaves) {
+  const bakeTimeVal = document.getElementById('bakeTime').value || '09:00';
+  const bakeDayOffset = parseInt(document.getElementById('bakeDay').value) || 1;
+  const coldProofHours = parseFloat(document.getElementById('coldProof').value) || 13.5;
+  const p1Min = parseInt(document.getElementById('phase1Min').value) || 18;
+  const p2Min = parseInt(document.getElementById('phase2Min').value) || 20;
+  const p1Temp = document.getElementById('phase1Temp').value;
+  const p2Temp = document.getElementById('phase2Temp').value;
+  const pullTemp = document.getElementById('pullTemp').value;
+
+  const now = new Date();
+  const bakeDate = new Date(now);
+  bakeDate.setDate(now.getDate() + bakeDayOffset);
+  const [bh, bm] = bakeTimeVal.split(':').map(Number);
+  bakeDate.setHours(bh, bm, 0, 0);
+
+  const preheatDate = addTime(bakeDate, -1);
+  const fridgeDate = addTime(bakeDate, -coldProofHours - 1); // -1 for preheat window
+  const shapeDate = addTime(fridgeDate, -0.75);
+  const bulkEndDate = addTime(shapeDate, -0.33);
+  const fold2Date = addTime(bulkEndDate, -1.5);
+  const fold1Date = addTime(fold2Date, -0.5);
+  const mixDate = fold1Date; // Mix = bulk start - 30min pre-fold
+  const actualMixDate = addTime(fold1Date, -0.5);
+  const autolyseDate = addTime(actualMixDate, -1.25); // 75 min autolyse
+  const prepDate = addTime(autolyseDate, -1.5);
+  const levainBuildDate = addTime(autolyseDate, -6); // 6h levain peak
+  const pullDate = addTime(bakeDate, (p1Min + p2Min) / 60);
+
+  const is95 = currentMode === '95';
+  const fold3Row = !is95 ? `<div class="schedule-row">
+    <div class="sched-time">${formatTime(addTime(fold2Date, 0.5))}</div>
+    <div class="sched-step">Coil Fold 3</div>
+    <div class="sched-detail">Gentle. 90/10 only. Hands off after this.</div>
+  </div>` : '';
+
+  // Day separators
+  const bakeDayStr = formatDate(bakeDate);
+  const prevDayStr = formatDate(levainBuildDate);
+  const isSameDay = bakeDayStr === prevDayStr;
+
+  let prevDay = '';
+  function dayHeader(d) {
+    const ds = formatDate(d);
+    if (ds !== prevDay) {
+      prevDay = ds;
+      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const fullDay = days[d.getDay()];
+      return `<div class="schedule-day-header">${fullDay.toUpperCase()}</div>`;
+    }
+    return '';
+  }
+
+  prevDay = '';
+  document.getElementById('schedMeta').textContent =
+    `Anchors: 6h Levain Peak · ${coldProofHours}h Cold Proof · Bake ${formatDate(bakeDate)} @ ${formatTime(bakeDate)}`;
+
+  const schedRows = [
+    { date: levainBuildDate, step: 'Levain Build', detail: `1:${Math.round(parseFloat(document.getElementById('levainPct').value))}:${Math.round(parseFloat(document.getElementById('levainPct').value))} — see ratio above. Peak in 6h. Set at 21–22°C.`, cls: '' },
+    { date: prepDate, step: 'Prep', detail: `Make Rye Scald · Mill ${fmt(parseFloat(document.getElementById('totalDough').value)/1.8)}g+ Park Wheat · Prep Altus if not ready. Cool everything fully.`, cls: '' },
+    { date: autolyseDate, step: is95 ? 'True Autolyse' : 'Fermentolyse', detail: is95 ? 'Cold Water I + cooled Scald + Park Wheat. Mix until no dry flour. Rest 75–90 min. No levain.' : 'Cold Water I + Levain + cooled Scald + Park Wheat. Mix. Rest 45 min.', cls: '' },
+    { date: actualMixDate, step: 'Final Mix', detail: is95 ? 'Levain dissolved in bassinage water → pour over dough. Add salt + altus. Pincer 3–5 min. Set aliquot jar. Target dough temp 24–25°C.' : 'Add salt + altus + bassinage water. Pincer 3–5 min. Set aliquot jar.', cls: '' },
+    { date: fold1Date, step: 'Coil Fold 1', detail: 'Strong. Build tension.', cls: '' },
+    { date: fold2Date, step: 'Coil Fold 2', detail: is95 ? 'Moderate. Hands off after this — no more folds.' : 'Moderate.', cls: '' },
+  ];
+
+  if (!is95) {
+    schedRows.push({ date: addTime(fold2Date, 0.5), step: 'Coil Fold 3', detail: 'Gentle. Last fold. Hands off after this.', cls: '' });
+  }
+
+  schedRows.push(
+    { date: bulkEndDate, step: 'End Bulk', detail: is95 ? 'Stop at 35–40% aliquot rise. Divide into portions.' : 'Stop at 30–35% aliquot rise. Divide into portions.', cls: 'critical' },
+    { date: shapeDate, step: 'Shape', detail: `Preshape → 20 min bench rest → final shape. ${is95 ? 'MODERATE tension.' : 'HIGH tension.'} Dust bannetons with rice flour. Seam-side up.`, cls: '' },
+    { date: fridgeDate, step: 'Into Fridge', detail: `Cold proof begins. ${coldProofHours}h at 3–4°C. Sweet spot: 13.5h. Max: 18h. Hard ceiling — do not exceed.`, cls: 'critical' },
+    { date: preheatDate, step: 'Preheat', detail: `${p1Temp}°F (260°C). Full 1 hour — no shortcuts.`, cls: 'bake' },
+    { date: bakeDate, step: 'Bake', detail: `Score deep (1cm+, 30° angle). Covered ${p1Min}min @ ${p1Temp}°F → uncovered ${p2Min}min @ ${p2Temp}°F. Bake to dark chestnut.`, cls: 'bake' },
+    { date: pullDate, step: 'Pull', detail: `Internal temp ~${pullTemp}°F. Do not fight the Calgary altitude stall. When it hits ${pullTemp}°F, pull. Cool on rack minimum 6 hours — ideally overnight.`, cls: 'bake' },
+  );
+
+  let prevDayTrack = '';
+  let html = '';
+  for (const row of schedRows) {
+    const ds = formatDate(row.date);
+    if (ds !== prevDayTrack) {
+      prevDayTrack = ds;
+      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      html += `<div class="schedule-day-header">${days[row.date.getDay()].toUpperCase()}</div>`;
+    }
+    html += `<div class="schedule-row ${row.cls}">
+      <div class="sched-time">${formatTime(row.date)}</div>
+      <div class="sched-step">${row.step}</div>
+      <div class="sched-detail">${row.detail}</div>
+    </div>`;
+  }
+
+  document.getElementById('scheduleGrid').innerHTML = html;
+}
+
+function buildProcessNotes() {
+  const is95 = currentMode === '95';
+  const cards = [
+    {
+      title: 'Temperature Management',
+      items: [
+        '<strong>Cold water is mandatory.</strong> Fresh milling = friction heat (~45°C). Boiling scald adds more thermal mass. Ice water (10–12°C) brings dough to target 24–25°C.',
+        '<strong>Measure flour temp before mixing.</strong> Use Rule of 320: Target Water Temp = (4 × DDT) − (Room + Flour + Levain + 3°C friction).',
+        '<strong>Target dough temp: 24–25°C.</strong> Above 28°C is catastrophic — protease activity accelerates and you lose the dough.',
+      ]
+    },
+    {
+      title: is95 ? 'True Autolyse (95/5)' : 'Fermentolyse (90/10)',
+      items: is95
+        ? [
+          '<strong>No levain in the autolyse.</strong> Levain added afterward dissolved in bassinage water. This is the key open-crumb lever.',
+          '<strong>60–90 minutes, hands off.</strong> Glutenin and gliadin hydrate and unravel without acid interference. Builds extensibility before the fermentation clock starts.',
+          '<strong>Do not skip or shorten.</strong> With 95% wheat at peak enzymatic activity, this window is the difference between a crumb that opens and one that stays tight.',
+        ]
+        : [
+          '<strong>Levain included in the autolyse (fermentolyse).</strong> Adds acidity from the start — appropriate for 90/10 where gluten is already well-supported.',
+          '<strong>45 minutes rest</strong> after combining levain + water + scald + flour. Then add salt, altus, and bassinage.',
+          '<strong>Note:</strong> Fermentolyse accelerates the bulk clock compared to true autolyse — watch the aliquot jar carefully.',
+        ]
+    },
+    {
+      title: 'Bulk Fermentation',
+      items: [
+        `<strong>Stop at ${is95 ? '35–40%' : '30–35%'} aliquot rise.</strong> Not 50%, not double. Fresh-milled flour degrades rapidly past this point.`,
+        `<strong>${is95 ? '2 coil folds only' : '3 coil folds'}.</strong> ${is95 ? 'T+30 (strong), T+60 (moderate). Hands completely off after fold 2.' : 'T+30 (strong), T+60 (moderate), T+90 (gentle). Hands off after fold 3.'}`,
+        '<strong>Final 1.5–2 hours: pure gas accumulation.</strong> Every additional fold after the schedule degasses the structure you spent hours building.',
+      ]
+    },
+    {
+      title: 'Shaping + Cold Proof',
+      items: [
+        is95
+          ? '<strong>Moderate tension only.</strong> Enough to hold shape in the banneton. Over-shaping is the #1 cause of tight crumb in a well-fermented loaf. Trust the cold proof.'
+          : '<strong>High tension.</strong> Rye pentosans provide enough structure for firm handling. Tight batard shape.',
+        '<strong>Generous rice flour in bannetons.</strong> Seam-side up.',
+        '<strong>13.5h sweet spot.</strong> 12–15h safe range. 18h absolute maximum. Protease enzymes slow but do not stop at 4°C.',
+        '<strong>Score directly from fridge.</strong> Cold dough = clean cut. Deep, single decisive score at 30° angle.',
+      ]
+    },
+  ];
+
+  document.getElementById('processGrid').innerHTML = cards.map(c => `
+    <div class="process-card">
+      <div class="process-card-title">${c.title}</div>
+      ${c.items.map(i => `<div class="process-item"><div class="process-dot"></div><div class="process-text">${i}</div></div>`).join('')}
+    </div>`).join('');
+}
+
+function buildRehab() {
+  const state = document.getElementById('starterState').value;
+  const bakeDayOffset = parseInt(document.getElementById('bakeDay').value) || 1;
+  const now = new Date();
+  const bakeDate = new Date(now);
+  bakeDate.setDate(now.getDate() + bakeDayOffset);
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const protocols = {
+    active: {
+      title: 'Active Starter — No Rehab Needed',
+      summary: 'Starter is healthy and peaking 4–6h after feeding. Proceed directly to levain build.',
+      schedule: [
+        { offset: -1, label: 'Maintenance feed', detail: '1:5:5 ratio. Park Wheat. Room temp.' },
+        { offset: 0, label: 'Levain build', detail: '1:6:6 — see ratio in Levain Build card. Peaks in 6h.' },
+      ],
+      note: 'A truly active starter doubles in 4–6 hours and shows a clear domed peak before falling. If yours is sluggish even when "active," step down to "Warm-stored" protocol.'
+    },
+    warm: {
+      title: 'Warm-Stored — Quick Refresh',
+      summary: 'Starter has been at room temp with recent feeds but may benefit from a single refresh before the build.',
+      schedule: [
+        { offset: -1, label: 'Refresh feed', detail: '1:5:5 ratio. Park Wheat. Room temp. Should peak in 6–8h.' },
+        { offset: 0, label: 'Levain build', detail: 'Once refresh is at peak — 1:6:6 build.' },
+      ],
+      note: 'If the refresh feed peaks in 8h+, treat as "Weak" and run a 2-day rehab.'
+    },
+    fridge_short: {
+      title: 'Cold-Stored < 1 Week — 2-Day Rehab',
+      summary: 'Starter needs 2 days of warm feeds to wake up cleanly before the build.',
+      schedule: [
+        { offset: -2, label: 'Day −2 AM', detail: 'Pull from fridge. Discard all but ~30g. Feed 1:3:3 with fresh-milled Park Wheat. Hold at room temp 22–24°C.' },
+        { offset: -2, label: 'Day −2 PM', detail: '12h later — feed 1:3:3 again.' },
+        { offset: -1, label: 'Day −1 AM', detail: 'Feed 1:5:5. Watch — should peak in 5–7h.' },
+        { offset: -1, label: 'Day −1 PM', detail: '12h later — feed 1:5:5.' },
+        { offset: 0, label: 'Build day', detail: '1:6:6 levain build. Should hit flat top in 6h.' },
+      ],
+      note: 'If by Day −1 PM the starter is still sluggish (peaking past 8h), extend rehab another full day at 1:5:5.'
+    },
+    fridge_long: {
+      title: 'Cold-Stored 1+ Week — Full Recovery Ladder',
+      summary: 'Starter is functional but depleted. 3-day rehab ladder needed to rebuild yeast dominance before the build.',
+      schedule: [
+        { offset: -3, label: 'Day −3 AM', detail: 'Pull from fridge. Discard all but ~20g. Feed 1:1:1 with fresh-milled Park Wheat. Room temp 22–24°C.' },
+        { offset: -3, label: 'Day −3 PM', detail: '12h later — feed 1:1:1 again. Should be doubling in 4–6h.' },
+        { offset: -2, label: 'Day −2 AM', detail: 'Feed 1:2:2 or 1:3:3. Yeast population should be visibly more vigorous.' },
+        { offset: -2, label: 'Day −2 PM', detail: '12h later — feed 1:3:3.' },
+        { offset: -1, label: 'Day −1 AM', detail: 'Feed 1:5:5. Should peak in 5–7h with clear dome and fall.' },
+        { offset: -1, label: 'Day −1 PM', detail: '12h later — feed 1:5:5.' },
+        { offset: 0, label: 'Build day', detail: '1:6:6 levain build. Should hit flat top in 6h, 200–300% rise.' },
+      ],
+      note: 'CRITICAL: Do not skip the 1:1:1 phase. A weak starter cannot keep up with high-feed ratios — the yeast gets perpetually outpaced. Tight ratios (1:1:1) let yeast colonize before being asked to scale.'
+    },
+    weak: {
+      title: 'Weak / Underperforming — Aggressive Rehab',
+      summary: 'Starter is showing slow rise, weak peaks, or sour/acetone smell. Full reset needed before next build.',
+      schedule: [
+        { offset: -4, label: 'Day −4', detail: 'Discard all but 10g. Feed 1:1:1 fresh-milled Park Wheat. Mark jar. Hold at warm room temp 24°C.' },
+        { offset: -4, label: 'Day −4 (12h)', detail: 'Feed 1:1:1 again. Watch for any rise — even modest doubling is progress.' },
+        { offset: -3, label: 'Day −3', detail: 'Continue 1:1:1 feeds every 12h until starter is reliably doubling in 4–6h. May take 2–3 days at this stage.' },
+        { offset: -2, label: 'Day −2', detail: 'Once doubling at 1:1:1: step up to 1:2:2 feeds, twice daily.' },
+        { offset: -1, label: 'Day −1', detail: '1:3:3 feeds, twice daily. Watch the rise time — should peak in 4–5h.' },
+        { offset: 0, label: 'Build day', detail: 'If starter is consistently peaking 4–6h at 1:5:5, proceed with 1:6:6 levain build. If not, postpone the bake.' },
+      ],
+      note: 'If after 4 days of 1:1:1 feeds the starter still won\'t reliably double, it may be dead. Consider obtaining fresh starter or beginning a new culture from scratch.'
+    },
+  };
+
+  const p = protocols[state];
+
+  let html = `<div style="padding: 16px 20px;">
+    <div style="font-size: 13px; font-weight: 700; color: var(--black); margin-bottom: 4px;">${p.title}</div>
+    <div style="font-size: 12px; color: var(--text-mid); margin-bottom: 14px; line-height: 1.5;">${p.summary}</div>`;
+
+  html += `<table style="margin-bottom: 12px;"><thead><tr>
+    <th style="width: 90px;">Day</th>
+    <th style="width: 130px;">Step</th>
+    <th>Detail</th></tr></thead><tbody>`;
+
+  for (const step of p.schedule) {
+    const stepDate = new Date(bakeDate);
+    stepDate.setDate(bakeDate.getDate() + step.offset);
+    const dayLabel = step.offset === 0 ? `<strong>Bake Day</strong><br><span style="font-size: 10px; color: var(--text-light);">${dayNames[stepDate.getDay()]}</span>` : `${step.offset > 0 ? '+' : ''}${step.offset}d<br><span style="font-size: 10px; color: var(--text-light);">${dayNames[stepDate.getDay()]}</span>`;
+    html += `<tr><td style="font-size: 11px; font-weight: 700; text-align: left;">${dayLabel}</td>
+      <td style="font-size: 12px; font-weight: 700; text-align: left;">${step.label}</td>
+      <td style="font-size: 11px; color: var(--text-mid); text-align: left;">${step.detail}</td></tr>`;
+  }
+  html += '</tbody></table>';
+
+  html += `<div style="padding: 10px 12px; background: var(--warning-bg); border-radius: var(--radius-sm); font-size: 11px; color: var(--warning); font-weight: 600; line-height: 1.5; margin-top: 10px;">${p.note}</div>`;
+  html += '</div>';
+
+  document.getElementById('rehabBody').innerHTML = html;
+}
+
+function buildRules() {
+  const rules = [
+    { text: '<strong>Do not fight the 205°F stall.</strong> Calgary altitude: water boils at ~205°F. The internal temperature stalls here. Extended bake time just dehydrates the crumb. Pull when you hit it.' },
+    { text: '<strong>Levain peaks in 6 hours, not 8–10.</strong> A collapsed levain will immediately solubilize the gluten. Use visual cue (flat top) not the clock.' },
+    { text: '<strong>Cold water is mandatory.</strong> Warm water combined with friction-hot flour and boiling scald will push dough above 28°C. This destroys the gluten network via proteolysis.' },
+    { text: '<strong>Do not exceed 18 hours cold retard.</strong> Whole grain bran contains active protease enzymes. Cumulative proteolysis over 24–36h produces the Frisbee Effect: flat, dense, gummy loaf.' },
+    { text: '<strong>Altus is not optional at 82%+ hydration.</strong> Pre-gelatinized starch gel locks water without adding dough slackness. Without it you get either an unmanageable wet dough or a crumbly loaf.' },
+    { text: '<strong>Cool minimum 6 hours. Ideally overnight.</strong> The starch structure is still setting. Cutting early guarantees gummy crumb regardless of bake quality.' },
+    { text: '<strong>Do not exceed 40% bulk rise (95/5) or 35% (90/10).</strong> Past this point, protease enzymes in the bran begin severing gluten strands faster than fermentation is building structure.' },
+  ];
+
+  document.getElementById('rulesBody').innerHTML = rules.map((r, i) => `
+    <div class="rule-item">
+      <div class="rule-num">${i + 1}</div>
+      <div class="rule-text">${r.text}</div>
+    </div>`).join('');
+}
+
+function resetDefaults() {
+  document.getElementById('totalDough').value = 5080;
+  document.getElementById('loafSize').value = 1010;
+  document.getElementById('wheatPct').value = 95;
+  document.getElementById('ryePct').value = 5;
+  document.getElementById('hydration').value = 82;
+  document.getElementById('bassinage').value = 7;
+  document.getElementById('levainPct').value = 16;
+  document.getElementById('starterG').value = 30;
+  document.getElementById('saltPct').value = 2.2;
+  document.getElementById('altusToggle').checked = true;
+  document.getElementById('altusInputs').style.display = '';
+  document.getElementById('altusPct').value = 5.3;
+  document.getElementById('altusRatio').value = 2;
+  document.getElementById('bakeDay').value = 1;
+  document.getElementById('bakeTime').value = '09:00';
+  document.getElementById('coldProof').value = 13.5;
+  document.getElementById('phase1Temp').value = 500;
+  document.getElementById('phase1Min').value = 18;
+  document.getElementById('phase2Temp').value = 415;
+  document.getElementById('phase2Min').value = 20;
+  document.getElementById('pullTemp').value = 205;
+  document.getElementById('starterState').value = 'fridge_long';
+  // Update slider displays
+  document.getElementById('wheatPctDisplay').textContent = '95%';
+  document.getElementById('ryePctDisplay').textContent = '5%';
+  document.getElementById('hydrationDisplay').textContent = '82%';
+  document.getElementById('bassinageDisplay').textContent = '7%';
+  document.getElementById('saltDisplay').textContent = '2.2%';
+  setMode('95');
+}
+
+// Initial render
+document.getElementById('wheatPctDisplay').textContent = '95%';
+document.getElementById('ryePctDisplay').textContent = '5%';
+recalc();
+</script>
+</body>
+</html>
