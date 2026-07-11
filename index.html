@@ -361,6 +361,161 @@
   .key-time-row.highlight .key-time-label { color: var(--teal-dark); font-weight: 700; }
   .key-time-row.past .key-time-val { color: var(--warning); }
 
+  /* ── TIMELINE (drag to plan) ── */
+  .tl-body {
+    padding: 16px 20px 6px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .tl-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  .tl-day {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--teal-dark);
+  }
+
+  .tl-cap {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-mid);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .tl-track {
+    position: relative;
+    height: 38px;
+    background: var(--cream);
+    border: 1px solid var(--cream-border);
+    border-radius: 10px;
+    background-image: repeating-linear-gradient(to right,
+      transparent 0,
+      transparent calc(100%/24 - 1px),
+      var(--cream-dark) calc(100%/24 - 1px),
+      var(--cream-dark) calc(100%/24));
+  }
+
+  .tl-hours {
+    position: relative;
+    height: 14px;
+    margin: 3px 0 6px;
+  }
+
+  .tl-hours span {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text-light);
+  }
+
+  .tl-pill {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    border-radius: 14px;
+    cursor: grab;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  }
+
+  .tl-pill span { pointer-events: none; }
+
+  /* generous touch target beyond the visible pill */
+  .tl-pill::after { content: ''; position: absolute; inset: -8px -14px; }
+
+  .tl-pill.mix { background: linear-gradient(180deg, var(--teal), var(--teal-dark)); }
+  .tl-pill.bake { background: linear-gradient(180deg, #E09B3D, #C8651A); }
+
+  .tl-pill.dragging {
+    cursor: grabbing;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    z-index: 5;
+  }
+
+  .tl-marker {
+    position: absolute;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    background: var(--white);
+    border: 2px solid var(--teal-dark);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
+  .tl-now {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--warning);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+
+  .tl-gutter {
+    position: relative;
+    height: 34px;
+    margin-bottom: 2px;
+  }
+
+  .tl-gutter svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .tl-cp-chip {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--teal-light);
+    border: 1px solid var(--teal-mid);
+    color: var(--teal-dark);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 12px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
+  .tl-cp-chip.limit {
+    background: var(--warning-bg);
+    border-color: rgba(200,101,26,0.4);
+    color: var(--warning);
+  }
+
+  .tl-hint {
+    font-size: 11px;
+    color: var(--text-light);
+    margin: 6px 0 10px;
+    line-height: 1.5;
+  }
+
   /* Range slider */
   input[type="range"] {
     -webkit-appearance: none;
@@ -1390,6 +1545,15 @@
     <!-- ALERTS -->
     <div id="alertZone"></div>
 
+    <!-- TIMELINE -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <span class="section-card-title">Timeline — Drag to Plan</span>
+        <span class="section-card-meta" id="tlMeta"></span>
+      </div>
+      <div class="tl-body" id="tlBody"></div>
+    </div>
+
     <!-- STAT CARDS -->
     <div class="cards-row">
       <div class="stat-card accent">
@@ -1701,6 +1865,195 @@ function renderKeyTimes(sched) {
     </div>`).join('');
 }
 
+// ── Drag-to-plan timeline ─────────────────────────────────────────────
+// Two 24h day tracks. The mix pill spans the hands-on block (autolyse →
+// into fridge); the bake pill spans preheat → pull. The cold proof is the
+// elastic link: dragging the mix pill translates both pills together;
+// dragging the bake pill stretches the link within 12–18h, after which it
+// pulls the mix pill along. All hours are measured on a 48h axis starting
+// at midnight of the mix (autolyse) day.
+
+let tlDrag = null; // live drag session
+let tlCtx = null;  // geometry of the last render
+
+function tlAxisDate(day0, h) { return new Date(day0.getTime() + h * 3600000); }
+
+function fmtDur(h) {
+  const hh = Math.floor(h + 1e-9), mm = Math.round((h - hh) * 60);
+  return mm ? `${hh} h ${mm.toString().padStart(2, '0')} m` : `${hh} h`;
+}
+
+function renderTimeline(sched) {
+  const body = $('tlBody');
+  const day0 = new Date(sched.autolyseDate);
+  day0.setHours(0, 0, 0, 0);
+  const hrs = d => (d - day0) / 3600000;
+
+  const F = hrs(sched.fridgeDate);
+  const B = hrs(sched.bakeDate);
+  const handsOn = F - hrs(sched.autolyseDate);
+  const bakeDur = hrs(sched.pullDate) - hrs(sched.preheatDate);
+
+  tlCtx = { day0, F, B, handsOn, bakeDur };
+
+  const pct = h => (h / 24) * 100;
+  // split an [a,b] hour span into per-row segments
+  const segs = (a, b) => {
+    const out = [];
+    for (let r = 0; r < 2; r++) {
+      const lo = Math.max(a, r * 24), hi = Math.min(b, (r + 1) * 24);
+      if (hi - lo > 0.03) out.push({ row: r, left: pct(lo - r * 24), width: pct(hi - lo) });
+    }
+    return out;
+  };
+
+  const mixSegs = segs(F - handsOn, F);
+  const bakeSegs = segs(B - 1, B - 1 + bakeDur);
+  const lvH = hrs(sched.levainDate);
+  const nowH = hrs(sched.now);
+
+  const hoursHtml = `<div class="tl-hours"><span style="left:0%">12a</span><span style="left:25%">6a</span><span style="left:50%">12p</span><span style="left:75%">6p</span><span style="left:100%">12a</span></div>`;
+
+  const trackHtml = (row) => {
+    let inner = '';
+    for (const s of mixSegs.filter(s => s.row === row)) {
+      inner += `<div class="tl-pill mix" data-kind="mix" style="left:${s.left}%; width:${s.width}%"><span>MIX → FRIDGE</span></div>`;
+    }
+    for (const s of bakeSegs.filter(s => s.row === row)) {
+      inner += `<div class="tl-pill bake" data-kind="bake" style="left:${s.left}%; width:${s.width}%"><span>BAKE</span></div>`;
+    }
+    if (lvH >= 0 && lvH < 48 && Math.floor(lvH / 24) === row) {
+      inner += `<div class="tl-marker" title="Levain build ${formatTime(sched.levainDate)}" style="left:${pct(lvH - row * 24)}%"></div>`;
+    }
+    if (nowH >= 0 && nowH < 48 && Math.floor(nowH / 24) === row) {
+      inner += `<div class="tl-now" title="Now" style="left:${pct(nowH - row * 24)}%"></div>`;
+    }
+    return `<div class="tl-track" data-row="${row}">${inner}</div>${hoursHtml}`;
+  };
+
+  const dayName = i => DAY_FULL[tlAxisDate(day0, i * 24).getDay()].toUpperCase();
+
+  body.innerHTML = `
+    <div class="tl-row-head"><span class="tl-day">${dayName(0)}</span><span class="tl-cap" id="tlCap1"></span></div>
+    ${trackHtml(0)}
+    <div class="tl-gutter">
+      <svg viewBox="0 0 1000 34" preserveAspectRatio="none"><path id="tlPath" fill="none" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"></path></svg>
+      <div class="tl-cp-chip" id="tlChip"></div>
+    </div>
+    <div class="tl-row-head"><span class="tl-day">${dayName(1)}</span><span class="tl-cap" id="tlCap2"></span></div>
+    ${trackHtml(1)}
+    <div class="tl-hint">Drag either pill. The cold-proof link stretches between 12–18 h before it pulls the other pill along.</div>
+  `;
+
+  tlUpdateDecor(F, B);
+  body.querySelectorAll('.tl-pill').forEach(p => p.addEventListener('pointerdown', tlPointerDown));
+
+  $('tlMeta').textContent =
+    `Hands-on block ${fmtDur(handsOn)} · Levain ${DAY_SHORT[sched.levainDate.getDay()]} ${formatTime(sched.levainDate)}`;
+}
+
+// Connector, cold-proof chip, and captions — updated live during a drag
+function tlUpdateDecor(F, B) {
+  const { day0, handsOn, bakeDur } = tlCtx;
+  const CP = B - F - 1;
+  const cpStr = String(Math.round(CP * 100) / 100);
+  const atLimit = CP <= 12.01 || CP >= 17.99;
+
+  const x = h => (h % 24) / 24 * 1000;
+  const x1 = x(F), x2 = x(B - 1);
+  const y1 = F < 24 ? 0 : 34;
+  const y2 = (B - 1) < 24 ? 0 : 34;
+  const path = $('tlPath');
+  path.setAttribute('d', `M ${x1} ${y1} L ${x1} 17 L ${x2} 17 L ${x2} ${y2}`);
+  path.setAttribute('stroke', atLimit ? 'var(--warning)' : 'var(--teal)');
+
+  const chip = $('tlChip');
+  chip.style.left = ((x1 + x2) / 2 / 10) + '%';
+  chip.textContent = `${cpStr} h cold proof`;
+  chip.classList.toggle('limit', atLimit);
+
+  $('tlCap1').textContent = `Mix ${formatTime(tlAxisDate(day0, F - handsOn))} → Fridge ${formatTime(tlAxisDate(day0, F))}`;
+  $('tlCap2').textContent = `Preheat ${formatTime(tlAxisDate(day0, B - 1))} · Bake ${formatTime(tlAxisDate(day0, B))} · Pull ${formatTime(tlAxisDate(day0, B - 1 + bakeDur))}`;
+}
+
+function tlPointerDown(e) {
+  e.preventDefault();
+  const pill = e.currentTarget;
+  const track = pill.closest('.tl-track');
+  tlDrag = {
+    kind: pill.dataset.kind,
+    x0: e.clientX,
+    trackW: track.clientWidth,
+    F0: tlCtx.F, B0: tlCtx.B,
+    F: tlCtx.F, B: tlCtx.B,
+    moved: false,
+  };
+  pill.classList.add('dragging');
+  pill.setPointerCapture(e.pointerId);
+  pill.addEventListener('pointermove', tlPointerMove);
+  pill.addEventListener('pointerup', tlPointerUp);
+  pill.addEventListener('pointercancel', tlPointerUp);
+}
+
+function tlPointerMove(e) {
+  if (!tlDrag) return;
+  const dH = (e.clientX - tlDrag.x0) / tlDrag.trackW * 24;
+  if (Math.abs(dH) > 0.02) tlDrag.moved = true;
+  const snap = h => Math.round(h * 4) / 4; // 15-minute grid
+  let F, B;
+  if (tlDrag.kind === 'mix') {
+    // translate both pills together, proof preserved
+    const CP0 = tlDrag.B0 - tlDrag.F0 - 1;
+    F = Math.min(28, Math.max(0.5, snap(tlDrag.F0 + dH)));
+    B = F + CP0 + 1;
+  } else {
+    // stretch the proof within 12–18h, then pull the mix pill along
+    B = Math.min(47.5, Math.max(13.5, snap(tlDrag.B0 + dH)));
+    const CP = Math.min(18, Math.max(12, B - tlDrag.F0 - 1));
+    F = B - CP - 1;
+  }
+  tlDrag.F = F;
+  tlDrag.B = B;
+
+  const txMix = (F - tlDrag.F0) / 24 * tlDrag.trackW;
+  const txBake = (B - tlDrag.B0) / 24 * tlDrag.trackW;
+  document.querySelectorAll('#tlBody .tl-pill.mix').forEach(p => p.style.transform = `translateX(${txMix}px)`);
+  document.querySelectorAll('#tlBody .tl-pill.bake').forEach(p => p.style.transform = `translateX(${txBake}px)`);
+  tlUpdateDecor(F, B);
+}
+
+function tlPointerUp(e) {
+  const pill = e.currentTarget;
+  pill.classList.remove('dragging');
+  pill.removeEventListener('pointermove', tlPointerMove);
+  pill.removeEventListener('pointerup', tlPointerUp);
+  pill.removeEventListener('pointercancel', tlPointerUp);
+  if (!tlDrag) return;
+  const { F, B, moved } = tlDrag;
+  tlDrag = null;
+  if (!moved) return;
+
+  // Commit to the schedule inputs (whichever anchor is active), then recalc
+  const CP = Math.min(18, Math.max(12, Math.round((B - F - 1) * 100) / 100));
+  const day0Offset = dayOffsetFromToday(tlCtx.day0);
+  const anchorH = anchorMode === 'fridge' ? F : B;
+  const total = day0Offset * 24 + anchorH;
+  const dayOff = Math.min(4, Math.max(0, Math.floor(total / 24)));
+  const hod = total - Math.floor(total / 24) * 24;
+  const hh = Math.floor(hod);
+  const mm = Math.round((hod - hh) * 60) % 60;
+  const t = `${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
+  if (anchorMode === 'fridge') {
+    $('fridgeDay').value = dayOff;
+    $('fridgeTime').value = t;
+  } else {
+    $('bakeDay').value = dayOff;
+    $('bakeTime').value = t;
+  }
+  $('coldProof').value = CP;
+  recalc();
+}
+
 const REHAB_LEAD_DAYS = { active: 0, warm: 1, fridge_short: 2, fridge_long: 3, weak: 4 };
 
 function recalc() {
@@ -1817,6 +2170,7 @@ function recalc() {
   const suggestSeed = seedOverride != null ? Math.max(5, Math.round(levainFlour / suggestMult)) : starterG;
 
   renderKeyTimes(sched);
+  renderTimeline(sched);
 
   const levainPeakStr = `Peak ≈ ${windowStr}h @ ${Math.round(levainTemp)}°C`;
   $('levainMeta').textContent = `Build ${DAY_SHORT[sched.levainDate.getDay()]} ${formatTime(sched.levainDate)} · peak ≈ ${windowStr}h @ ${Math.round(levainTemp)}°C`;
