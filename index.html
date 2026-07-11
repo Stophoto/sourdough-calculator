@@ -1212,7 +1212,19 @@
           <button type="button" class="seg-btn" id="lvDayBtn" onclick="setLevainMode('day')">Same Day</button>
           <button type="button" class="seg-btn" id="lvNightBtn" onclick="setLevainMode('overnight')">Night Before</button>
         </div>
+        <div class="input-row">
+          <span class="input-label">Build At</span>
+          <input type="time" id="levainTime" onchange="onLevainTimeEdit()">
+        </div>
+        <div class="range-row">
+          <div class="range-header">
+            <span class="input-label">Levain Spot Temp</span>
+            <span class="range-val" id="levainTempDisplay">21°C</span>
+          </div>
+          <input type="range" id="levainTemp" min="15" max="28" value="21" step="1" oninput="recalc()">
+        </div>
         <div class="hint-text" id="levainModeHint"></div>
+        <div class="batch-total" id="levainSuggest"></div>
 
         <div class="key-times" id="keyTimes"></div>
       </div>
@@ -1272,7 +1284,7 @@
         <div class="input-row">
           <span class="input-label">Starter Seed</span>
           <div class="input-field">
-            <input type="number" id="starterG" value="30" step="5" min="10" max="100" oninput="recalc()">
+            <input type="number" id="starterG" value="30" step="5" min="5" max="150" oninput="onSeedEdit()">
             <span class="unit">g</span>
           </div>
         </div>
@@ -1535,8 +1547,10 @@ function formatTime(d) {
   return `${hh}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-let anchorMode = 'fridge';   // 'bake' = back-calculate from bake time; 'fridge' = plan forward from fridge time
-let levainMode = 'auto';     // 'auto' | 'day' (6h same-day build) | 'overnight' (12h night-before build)
+let anchorMode = 'fridge';       // 'bake' = back-calculate from bake time; 'fridge' = plan forward from fridge time
+let levainMode = 'auto';         // 'auto' | 'day' (same-day build) | 'overnight' (night-before build)
+let levainTimeOverride = null;   // 'HH:MM' when the user pins the build time; null = default placement
+let seedOverride = null;         // grams when the user edits the seed; null = auto-sized to the window
 
 function dayOffsetFromToday(d) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -1582,7 +1596,24 @@ function setAnchor(mode) {
 
 function setLevainMode(mode) {
   levainMode = mode;
+  levainTimeOverride = null; // mode buttons restore default placement
   syncScheduleUI();
+  recalc();
+}
+
+function onLevainTimeEdit() {
+  if (levainMode === 'auto') {
+    // Touching the time is choosing it — pin the current placement as explicit
+    levainMode = computeSchedule().levainResolved;
+    syncScheduleUI();
+  }
+  levainTimeOverride = $('levainTime').value || null;
+  recalc();
+}
+
+function onSeedEdit() {
+  const v = parseFloat($('starterG').value);
+  seedOverride = Number.isNaN(v) ? null : v;
   recalc();
 }
 
@@ -1623,16 +1654,25 @@ function computeSchedule() {
   const autolyseDate = addTime(mixDate, -1.25); // 75 min autolyse
   const prepDate = addTime(autolyseDate, -1.5);
 
-  // Levain: 6h same-day build, or 12h night-before build. Auto goes overnight
-  // when the 6h build would land before 7 AM (or on the previous day anyway).
+  // Levain placement: default 6h same-day build or 12h night-before build.
+  // Auto goes overnight when the 6h build would land before 7 AM (or on the
+  // previous day anyway). "Build At" pins the time; the day follows the mode.
   const sameDayLevain = addTime(autolyseDate, -6);
   let levainResolved = levainMode;
   if (levainMode === 'auto') {
     levainResolved = (sameDayLevain.getHours() < 7 || sameDayLevain.getDate() !== autolyseDate.getDate())
       ? 'overnight' : 'day';
   }
-  const levainWindow = levainResolved === 'overnight' ? 12 : 6;
-  const levainDate = addTime(autolyseDate, -levainWindow);
+  let levainDate;
+  if (levainTimeOverride) {
+    const [lh, lm] = levainTimeOverride.split(':').map(Number);
+    levainDate = new Date(autolyseDate);
+    levainDate.setHours(lh, lm, 0, 0);
+    if (levainResolved === 'overnight') levainDate.setDate(levainDate.getDate() - 1);
+  } else {
+    levainDate = addTime(autolyseDate, levainResolved === 'overnight' ? -12 : -6);
+  }
+  const levainWindow = (autolyseDate - levainDate) / 3600000;
 
   const p1Min = parseInt($('phase1Min').value) || 18;
   const p2Min = parseInt($('phase2Min').value) || 20;
@@ -1674,7 +1714,6 @@ function recalc() {
   const hydrationTarget = parseFloat($('hydration').value) / 100;
   const bassinage = parseFloat($('bassinage').value) / 100;
   const levainPct = parseFloat($('levainPct').value) / 100;
-  const starterG = parseFloat($('starterG').value) || 30;
   const saltPct = parseFloat($('saltPct').value) / 100;
   const altusOn = $('altusToggle').checked;
   const altusPct = altusOn ? (parseFloat($('altusPct').value) || 5.3) / 100 : 0;
@@ -1687,6 +1726,21 @@ function recalc() {
   $('saltDisplay').textContent = (saltPct * 100).toFixed(1) + '%';
   const coldProofVal = parseFloat($('coldProof').value) || 13.5;
   $('coldProofDisplay').textContent = (coldProofVal % 1 === 0 ? coldProofVal : coldProofVal.toFixed(1)) + ' h';
+  const levainTemp = parseFloat($('levainTemp').value) || 21;
+  $('levainTempDisplay').textContent = Math.round(levainTemp) + '°C';
+
+  // ── Schedule first: the levain feed is sized to the build window ──
+  const sched = computeSchedule();
+  if (!levainTimeOverride) {
+    $('levainTime').value = `${sched.levainDate.getHours().toString().padStart(2, '0')}:${sched.levainDate.getMinutes().toString().padStart(2, '0')}`;
+  }
+
+  // Rule of thumb: a 1:N:N levain at ~21°C peaks in ~N hours, and fermentation
+  // speed shifts roughly 10% per °C — so convert the real window into
+  // 21°C-equivalent hours and feed to match.
+  const tempFactor = Math.pow(1.1, levainTemp - 21);
+  const effHours = sched.levainWindow * tempFactor;
+  const suggestMult = Math.min(20, Math.max(2, Math.round(effHours)));
 
   // ── TFW Solver ──
   // Convention: TFW = main dough flour (wheat main + rye scald) = the "100%" base.
@@ -1696,6 +1750,15 @@ function recalc() {
   //   totalDough = TFW × (1 + levainPct + hydrationTarget + saltPct + altusPct) + starterG
   //   TFW = (totalDough − starterG) / (1 + levainPct + hydrationTarget + saltPct + altusPct)
   const denom = 1 + levainPct + hydrationTarget + saltPct + altusPct;
+  let starterG;
+  if (seedOverride != null) {
+    starterG = seedOverride;
+  } else {
+    // Auto seed: solve so seed = levain flour / suggested ratio
+    const tfwEst = totalDough / (denom + levainPct / suggestMult);
+    starterG = Math.max(5, Math.round(tfwEst * levainPct / suggestMult));
+    $('starterG').value = starterG;
+  }
   const TFW = Math.round((totalDough - starterG) / denom);
 
   const ryeFlour = Math.round(TFW * ryePct);
@@ -1746,32 +1809,42 @@ function recalc() {
   $('levainRatioDisplay').innerHTML =
     `<span class="ratio-label">Ratio</span><span class="ratio-val">${ratioStr}</span>`;
 
-  // ── Schedule dates (needed for alerts + levain guidance) ──
-  const sched = computeSchedule();
+  // ── Alerts + levain guidance ──
   const bakeDayOffset = dayOffsetFromToday(sched.bakeDate);
   const starterState = $('starterState').value;
-  const overnight = sched.levainResolved === 'overnight';
-  const w = sched.levainWindow;
+  const nightBefore = sched.levainDate.getDate() !== sched.autolyseDate.getDate();
+  const windowStr = sched.levainWindow % 1 ? sched.levainWindow.toFixed(1) : String(sched.levainWindow);
+  const suggestSeed = seedOverride != null ? Math.max(5, Math.round(levainFlour / suggestMult)) : starterG;
 
   renderKeyTimes(sched);
 
-  // Levain build guidance follows the chosen window: 6h warm same-day build
-  // vs 12h cool night-before build (stiffer ratio, less seed).
-  const levainPeakStr = overnight ? 'Peak in 10–12h @ 18–21°C' : 'Peak in 6h @ 21–22°C';
-  $('levainMeta').textContent = (overnight ? 'Night-before build · ' : 'Same-day build · ') + levainPeakStr;
-  $('starterHint').textContent = `Current build ratio ${ratioStr}. For the ${w} h ${overnight ? 'night-before' : 'same-day'} build, aim for 1:${w}:${w} → ~${fmt(levainFlour / w)} g seed.`;
+  const levainPeakStr = `Peak ≈ ${windowStr}h @ ${Math.round(levainTemp)}°C`;
+  $('levainMeta').textContent = `Build ${DAY_SHORT[sched.levainDate.getDay()]} ${formatTime(sched.levainDate)} · peak ≈ ${windowStr}h @ ${Math.round(levainTemp)}°C`;
+  $('starterHint').textContent = seedOverride == null
+    ? `Auto-sized to the ${windowStr} h build window at ${Math.round(levainTemp)}°C (1:${suggestMult}:${suggestMult}). Edit to override.`
+    : `Manual seed. Suggested for this window: ~${fmt(suggestSeed)} g (1:${suggestMult}:${suggestMult}). Reset Defaults restores auto.`;
 
+  const levainHints = [];
   if (levainMode === 'auto') {
-    $('levainModeHint').textContent = overnight
-      ? `Auto chose night before — a same-day 6 h build would land at ${formatTime(sched.sameDayLevain)}.`
-      : `Auto chose same day — 6 h build at ${formatTime(sched.levainDate)}.`;
-  } else if (levainMode === 'day' && sched.levainDate.getHours() < 7) {
-    $('levainModeHint').textContent = `This build lands at ${formatTime(sched.levainDate)} — consider Night Before.`;
-  } else {
-    $('levainModeHint').textContent = overnight
-      ? '12 h build in a cool spot (18–21°C), mixed the evening before.'
-      : '6 h build at warm room temp (21–22°C).';
+    levainHints.push(nightBefore
+      ? `Auto: build the night before — a same-day 6 h build would land at ${formatTime(sched.sameDayLevain)}.`
+      : `Auto: same-day build at ${formatTime(sched.levainDate)}.`);
   }
+  if (sched.levainWindow <= 0) {
+    levainHints.push('⚠ Build time is at or after mix time — pick an earlier build.');
+  } else if (effHours > 20) {
+    levainHints.push(`⚠ ${windowStr} h at ${Math.round(levainTemp)}°C outruns even a 1:20:20 feed — build later or find a cooler spot.`);
+  } else if (effHours < 3) {
+    levainHints.push(`⚠ ${windowStr} h at ${Math.round(levainTemp)}°C is too short to peak — build earlier or somewhere warmer.`);
+  }
+  if (seedOverride != null && Math.abs(levainRatioMult - suggestMult) >= 2) {
+    levainHints.push(`Your ${ratioStr} seed will peak ${levainRatioMult < suggestMult ? 'early' : 'late'} over this window — suggested ~${fmt(suggestSeed)} g.`);
+  }
+  if (!levainHints.length) {
+    levainHints.push('Feed auto-sizes to the window and temperature — trust the flat top, not the clock.');
+  }
+  $('levainModeHint').textContent = levainHints.join(' ');
+  $('levainSuggest').textContent = `Feed: ${fmt(starterG)} g seed + ${fmt(levainFlour)} g flour + ${fmt(levainWater)} g water (1:${levainRatioMult}:${levainRatioMult})`;
 
   // ── Alerts ──
   const alerts = [];
@@ -1856,7 +1929,7 @@ function recalc() {
       <tr class="subtotal"><td>Total Scald</td><td class="td-weight">${fmt(ryeFlour + scaldWater)}g</td></tr>`;
   }
 
-  buildSchedule(sched, { ratioStr, starterG, levainFlour, levainWater, millG, scaldOn, altusOn });
+  buildSchedule(sched, { ratioStr, starterG, levainFlour, levainWater, millG, scaldOn, altusOn, levainTemp, windowStr, nightBefore });
   buildRehab(sched.bakeDate);
   buildProcessNotes();
   buildRules();
@@ -1866,7 +1939,7 @@ function buildSchedule(sched, ctx) {
   const is95 = currentMode === '95';
 
   $('schedMeta').textContent =
-    `Anchors: ${sched.levainWindow}h Levain · ${sched.coldProofHours}h Cold Proof · ` +
+    `Anchors: ${ctx.windowStr}h Levain · ${sched.coldProofHours}h Cold Proof · ` +
     (anchorMode === 'fridge'
       ? `Fridge ${DAY_SHORT[sched.fridgeDate.getDay()]} @ ${formatTime(sched.fridgeDate)} → Bake ${DAY_SHORT[sched.bakeDate.getDay()]} @ ${formatTime(sched.bakeDate)}`
       : `Bake ${DAY_SHORT[sched.bakeDate.getDay()]} @ ${formatTime(sched.bakeDate)}`);
@@ -1877,9 +1950,8 @@ function buildSchedule(sched, ctx) {
   if (ctx.altusOn) prepParts.push('Prep altus if not ready');
   prepParts.push('Cool everything fully.');
 
-  const overnight = sched.levainResolved === 'overnight';
   const schedRows = [
-    { date: sched.levainDate, step: overnight ? 'Levain (Night Before)' : 'Levain Build', detail: `${fmt(ctx.starterG)}g starter + ${fmt(ctx.levainFlour)}g flour + ${fmt(ctx.levainWater)}g water (${ctx.ratioStr}). ${overnight ? 'Cool spot 18–21°C. Peak in ~10–12h — ready at mix time.' : 'Set at 21–22°C. Peak in ~6h.'} Use at flat top.`, cls: '' },
+    { date: sched.levainDate, step: ctx.nightBefore ? 'Levain (Night Before)' : 'Levain Build', detail: `${fmt(ctx.starterG)}g starter + ${fmt(ctx.levainFlour)}g flour + ${fmt(ctx.levainWater)}g water (${ctx.ratioStr}). Hold at ${Math.round(ctx.levainTemp)}°C. Peak ≈ ${ctx.windowStr}h — ready at mix time. Use at flat top.`, cls: '' },
     { date: sched.prepDate, step: 'Prep', detail: prepParts.join(' · '), cls: '' },
     { date: sched.autolyseDate, step: is95 ? 'True Autolyse' : 'Fermentolyse', detail: is95 ? 'Cold Water I + cooled Scald + Park Wheat. Mix until no dry flour. Rest 75–90 min. No levain.' : 'Cold Water I + Levain + cooled Scald + Park Wheat. Mix. Rest 45 min.', cls: '' },
     { date: sched.mixDate, step: 'Final Mix', detail: is95 ? 'Levain dissolved in bassinage water → pour over dough. Add salt + altus. Pincer 3–5 min. Set aliquot jar. Target dough temp 24–25°C.' : 'Add salt + altus + bassinage water. Pincer 3–5 min. Set aliquot jar.', cls: '' },
@@ -2095,11 +2167,14 @@ function resetDefaults() {
   $('altusRatio').value = 2;
   anchorMode = 'fridge';
   levainMode = 'auto';
+  levainTimeOverride = null;
+  seedOverride = null;
   $('bakeDay').value = 1;
   $('bakeTime').value = '09:00';
   $('fridgeDay').value = 1;
   $('fridgeTime').value = '16:00';
   $('coldProof').value = 13.5;
+  $('levainTemp').value = 21;
   syncScheduleUI();
   $('phase1Temp').value = 500;
   $('phase1Min').value = 18;
