@@ -275,6 +275,92 @@
     text-align: center;
   }
 
+  /* Segmented control */
+  .mini-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-light);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .seg-wrap {
+    display: flex;
+    background: var(--cream-dark);
+    border: 1px solid var(--cream-border);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: 12px;
+  }
+
+  .seg-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border-radius: 16px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    background: transparent;
+    color: var(--text-light);
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .seg-btn.active {
+    background: var(--teal);
+    color: white;
+    box-shadow: 0 2px 6px rgba(54,179,175,0.35);
+  }
+
+  /* Key times summary */
+  .key-times {
+    background: var(--cream);
+    border: 1px solid var(--cream-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+
+  .key-time-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--cream-border);
+    font-size: 12px;
+  }
+
+  .key-time-row:last-child { border-bottom: none; }
+
+  .key-time-label {
+    color: var(--text-mid);
+    font-weight: 600;
+  }
+
+  .key-time-val {
+    font-weight: 800;
+    color: var(--black);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kt-day {
+    color: var(--text-light);
+    font-weight: 700;
+    font-size: 10px;
+    margin-right: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .key-time-row.highlight .key-time-val { color: var(--teal-dark); }
+  .key-time-row.highlight .key-time-label { color: var(--teal-dark); font-weight: 700; }
+  .key-time-row.past .key-time-val { color: var(--warning); }
+
   /* Range slider */
   input[type="range"] {
     -webkit-appearance: none;
@@ -1069,21 +1155,66 @@
 
       <!-- SCHEDULE -->
       <div class="sidebar-section">
-        <div class="section-label">Bake Schedule</div>
-        <div class="input-row">
-          <span class="input-label">Bake Day</span>
-          <select id="bakeDay" onchange="recalc()">
-            <option value="0">Today</option>
-            <option value="1" selected>Tomorrow</option>
-            <option value="2">In 2 days</option>
-            <option value="3">In 3 days</option>
-          </select>
+        <div class="section-label">Schedule</div>
+
+        <div class="mini-label">Plan From</div>
+        <div class="seg-wrap">
+          <button type="button" class="seg-btn" id="anchorBakeBtn" onclick="setAnchor('bake')">Bake Time</button>
+          <button type="button" class="seg-btn active" id="anchorFridgeBtn" onclick="setAnchor('fridge')">Fridge Time</button>
         </div>
-        <div class="input-row">
-          <span class="input-label">Bake Time</span>
-          <input type="time" id="bakeTime" value="09:00" onchange="recalc()">
+
+        <div id="bakeInputs" style="display:none;">
+          <div class="input-row">
+            <span class="input-label">Bake Day</span>
+            <select id="bakeDay" onchange="recalc()">
+              <option value="0">Today</option>
+              <option value="1" selected>Tomorrow</option>
+              <option value="2">In 2 days</option>
+              <option value="3">In 3 days</option>
+              <option value="4">In 4 days</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Bake Time</span>
+            <input type="time" id="bakeTime" value="09:00" onchange="recalc()">
+          </div>
         </div>
-        <div class="hint-text">The full timeline below back-calculates from this — levain build through pull.</div>
+
+        <div id="fridgeInputs">
+          <div class="input-row">
+            <span class="input-label">Fridge Day</span>
+            <select id="fridgeDay" onchange="recalc()">
+              <option value="0">Today</option>
+              <option value="1" selected>Tomorrow</option>
+              <option value="2">In 2 days</option>
+              <option value="3">In 3 days</option>
+              <option value="4">In 4 days</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <span class="input-label">Into Fridge By</span>
+            <input type="time" id="fridgeTime" value="16:00" onchange="recalc()">
+          </div>
+        </div>
+
+        <div class="range-row">
+          <div class="range-header">
+            <span class="input-label">Cold Proof</span>
+            <span class="range-val" id="coldProofDisplay">13.5 h</span>
+          </div>
+          <input type="range" id="coldProof" min="12" max="18" value="13.5" step="0.5" oninput="recalc()">
+        </div>
+        <div class="hint-text">Sweet spot 13.5 h · safe 12–15 h · hard ceiling 18 h. In fridge mode this slides your bake time.</div>
+
+        <div class="mini-label">Levain Build</div>
+        <div class="seg-wrap">
+          <button type="button" class="seg-btn active" id="lvAutoBtn" onclick="setLevainMode('auto')">Auto</button>
+          <button type="button" class="seg-btn" id="lvDayBtn" onclick="setLevainMode('day')">Same Day</button>
+          <button type="button" class="seg-btn" id="lvNightBtn" onclick="setLevainMode('overnight')">Night Before</button>
+        </div>
+        <div class="hint-text" id="levainModeHint"></div>
+
+        <div class="key-times" id="keyTimes"></div>
       </div>
 
       <!-- STARTER -->
@@ -1176,18 +1307,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="adv-group">
-        <div class="adv-group-title">Cold Proof</div>
-        <div class="input-row">
-          <span class="input-label">Duration</span>
-          <div class="input-field">
-            <input type="number" id="coldProof" value="13.5" step="0.5" min="12" max="18" oninput="recalc()">
-            <span class="unit">hr</span>
-          </div>
-        </div>
-        <div class="hint-text">Sweet spot 13.5 h · safe 12–15 h · hard ceiling 18 h.</div>
       </div>
 
       <div class="adv-group">
@@ -1307,7 +1426,7 @@
       <div class="section-card">
         <div class="section-card-header">
           <span class="section-card-title">Levain Build</span>
-          <span class="section-card-meta">Peak in 6h @ 21–22°C</span>
+          <span class="section-card-meta" id="levainMeta">Peak in 6h @ 21–22°C</span>
         </div>
         <div style="padding: 16px 20px;">
           <div id="levainRatioDisplay" class="levain-ratio">
@@ -1416,36 +1535,86 @@ function formatTime(d) {
   return `${hh}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-function getBakeDayOffset() {
-  const v = parseInt($('bakeDay').value);
-  return Number.isNaN(v) ? 1 : v;
+let anchorMode = 'fridge';   // 'bake' = back-calculate from bake time; 'fridge' = plan forward from fridge time
+let levainMode = 'auto';     // 'auto' | 'day' (6h same-day build) | 'overnight' (12h night-before build)
+
+function dayOffsetFromToday(d) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dd = new Date(d); dd.setHours(0, 0, 0, 0);
+  return Math.round((dd - today) / 86400000);
+}
+
+function readDayTime(dayId, timeId, defTime) {
+  const v = parseInt($(dayId).value);
+  const offset = Number.isNaN(v) ? 1 : v;
+  const [h, m] = ($(timeId).value || defTime).split(':').map(Number);
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function fillDayTime(dayId, timeId, date) {
+  $(dayId).value = Math.min(4, Math.max(0, dayOffsetFromToday(date)));
+  $(timeId).value = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function syncScheduleUI() {
+  $('anchorBakeBtn').classList.toggle('active', anchorMode === 'bake');
+  $('anchorFridgeBtn').classList.toggle('active', anchorMode === 'fridge');
+  $('bakeInputs').style.display = anchorMode === 'bake' ? '' : 'none';
+  $('fridgeInputs').style.display = anchorMode === 'fridge' ? '' : 'none';
+  $('lvAutoBtn').classList.toggle('active', levainMode === 'auto');
+  $('lvDayBtn').classList.toggle('active', levainMode === 'day');
+  $('lvNightBtn').classList.toggle('active', levainMode === 'overnight');
+}
+
+function setAnchor(mode) {
+  if (mode === anchorMode) return;
+  // Carry the current timeline across so switching modes doesn't jump the schedule
+  const sched = computeSchedule();
+  anchorMode = mode;
+  if (mode === 'fridge') fillDayTime('fridgeDay', 'fridgeTime', sched.fridgeDate);
+  else fillDayTime('bakeDay', 'bakeTime', sched.bakeDate);
+  syncScheduleUI();
+  recalc();
+}
+
+function setLevainMode(mode) {
+  levainMode = mode;
+  syncScheduleUI();
+  recalc();
 }
 
 function labelBakeDayOptions() {
-  const labels = ['Today', 'Tomorrow', 'In 2 days', 'In 3 days'];
+  const labels = ['Today', 'Tomorrow', 'In 2 days', 'In 3 days', 'In 4 days'];
   const now = new Date();
-  for (const opt of $('bakeDay').options) {
-    const offset = parseInt(opt.value);
-    const d = new Date(now);
-    d.setDate(now.getDate() + offset);
-    opt.textContent = `${labels[offset]} — ${DAY_SHORT[d.getDay()]}`;
+  for (const sel of [$('bakeDay'), $('fridgeDay')]) {
+    for (const opt of sel.options) {
+      const offset = parseInt(opt.value);
+      const d = new Date(now);
+      d.setDate(now.getDate() + offset);
+      opt.textContent = `${labels[offset]} — ${DAY_SHORT[d.getDay()]}`;
+    }
   }
 }
 
-// All schedule anchors back-calculate from the bake time.
+// The timeline hangs off one anchor: either the bake time (back-calculate
+// everything) or the into-fridge time (bake = fridge + cold proof + 1h preheat).
 function computeSchedule() {
-  const bakeTimeVal = $('bakeTime').value || '09:00';
-  const bakeDayOffset = getBakeDayOffset();
   const coldProofHours = parseFloat($('coldProof').value) || 13.5;
-
   const now = new Date();
-  const bakeDate = new Date(now);
-  bakeDate.setDate(now.getDate() + bakeDayOffset);
-  const [bh, bm] = bakeTimeVal.split(':').map(Number);
-  bakeDate.setHours(bh, bm, 0, 0);
+
+  let bakeDate, fridgeDate;
+  if (anchorMode === 'bake') {
+    bakeDate = readDayTime('bakeDay', 'bakeTime', '09:00');
+    fridgeDate = addTime(bakeDate, -coldProofHours - 1); // -1 for preheat window
+  } else {
+    fridgeDate = readDayTime('fridgeDay', 'fridgeTime', '16:00');
+    bakeDate = addTime(fridgeDate, coldProofHours + 1);
+  }
 
   const preheatDate = addTime(bakeDate, -1);
-  const fridgeDate = addTime(bakeDate, -coldProofHours - 1); // -1 for preheat window
   const shapeDate = addTime(fridgeDate, -0.75);
   const bulkEndDate = addTime(shapeDate, -0.33);
   const fold2Date = addTime(bulkEndDate, -1.5);
@@ -1453,7 +1622,17 @@ function computeSchedule() {
   const mixDate = addTime(fold1Date, -0.5);
   const autolyseDate = addTime(mixDate, -1.25); // 75 min autolyse
   const prepDate = addTime(autolyseDate, -1.5);
-  const levainDate = addTime(autolyseDate, -6); // 6h levain peak
+
+  // Levain: 6h same-day build, or 12h night-before build. Auto goes overnight
+  // when the 6h build would land before 7 AM (or on the previous day anyway).
+  const sameDayLevain = addTime(autolyseDate, -6);
+  let levainResolved = levainMode;
+  if (levainMode === 'auto') {
+    levainResolved = (sameDayLevain.getHours() < 7 || sameDayLevain.getDate() !== autolyseDate.getDate())
+      ? 'overnight' : 'day';
+  }
+  const levainWindow = levainResolved === 'overnight' ? 12 : 6;
+  const levainDate = addTime(autolyseDate, -levainWindow);
 
   const p1Min = parseInt($('phase1Min').value) || 18;
   const p2Min = parseInt($('phase2Min').value) || 20;
@@ -1461,10 +1640,25 @@ function computeSchedule() {
 
   return {
     now, bakeDate, preheatDate, fridgeDate, shapeDate, bulkEndDate,
-    fold2Date, fold1Date, mixDate, autolyseDate, prepDate, levainDate, pullDate,
+    fold2Date, fold1Date, mixDate, autolyseDate, prepDate, pullDate,
+    levainDate, sameDayLevain, levainResolved, levainWindow,
     coldProofHours, p1Min, p2Min,
     p1Temp: $('phase1Temp').value, p2Temp: $('phase2Temp').value, pullTemp: $('pullTemp').value,
   };
+}
+
+function renderKeyTimes(sched) {
+  const rows = [
+    { label: 'Levain Build', date: sched.levainDate },
+    { label: 'Start Mix', date: sched.autolyseDate },
+    { label: 'Into Fridge', date: sched.fridgeDate, hl: anchorMode === 'bake' },
+    { label: 'Bake', date: sched.bakeDate, hl: anchorMode === 'fridge' },
+  ];
+  $('keyTimes').innerHTML = rows.map(r => `
+    <div class="key-time-row${r.hl ? ' highlight' : ''}${r.date < sched.now ? ' past' : ''}">
+      <span class="key-time-label">${r.label}</span>
+      <span class="key-time-val"><span class="kt-day">${DAY_SHORT[r.date.getDay()]}</span>${formatTime(r.date)}</span>
+    </div>`).join('');
 }
 
 const REHAB_LEAD_DAYS = { active: 0, warm: 1, fridge_short: 2, fridge_long: 3, weak: 4 };
@@ -1491,6 +1685,8 @@ function recalc() {
   $('bassinageDisplay').textContent = Math.round(bassinage * 100) + '%';
   $('ryePctDisplay').textContent = Math.round(ryeSlider) + '%';
   $('saltDisplay').textContent = (saltPct * 100).toFixed(1) + '%';
+  const coldProofVal = parseFloat($('coldProof').value) || 13.5;
+  $('coldProofDisplay').textContent = (coldProofVal % 1 === 0 ? coldProofVal : coldProofVal.toFixed(1)) + ' h';
 
   // ── TFW Solver ──
   // Convention: TFW = main dough flour (wheat main + rye scald) = the "100%" base.
@@ -1532,7 +1728,6 @@ function recalc() {
   $('loafCount').textContent = loaves + (loaves === 1 ? ' loaf' : ' loaves');
   $('loafSizeDisplay').textContent = `~${fmt(loafActual)}g each`;
   $('batchTotal').textContent = `= ${fmt(actualTotal)} g total dough`;
-  $('starterHint').textContent = `Current build ratio ${ratioStr}. For a true 6 h 1:6:6 build, use ~${fmt(levainFlour / 6)} g seed.`;
 
   // ── Mode banner + subtitle ──
   const is95 = currentMode === '95';
@@ -1551,10 +1746,32 @@ function recalc() {
   $('levainRatioDisplay').innerHTML =
     `<span class="ratio-label">Ratio</span><span class="ratio-val">${ratioStr}</span>`;
 
-  // ── Schedule dates (needed for alerts) ──
+  // ── Schedule dates (needed for alerts + levain guidance) ──
   const sched = computeSchedule();
-  const bakeDayOffset = getBakeDayOffset();
+  const bakeDayOffset = dayOffsetFromToday(sched.bakeDate);
   const starterState = $('starterState').value;
+  const overnight = sched.levainResolved === 'overnight';
+  const w = sched.levainWindow;
+
+  renderKeyTimes(sched);
+
+  // Levain build guidance follows the chosen window: 6h warm same-day build
+  // vs 12h cool night-before build (stiffer ratio, less seed).
+  const levainPeakStr = overnight ? 'Peak in 10–12h @ 18–21°C' : 'Peak in 6h @ 21–22°C';
+  $('levainMeta').textContent = (overnight ? 'Night-before build · ' : 'Same-day build · ') + levainPeakStr;
+  $('starterHint').textContent = `Current build ratio ${ratioStr}. For the ${w} h ${overnight ? 'night-before' : 'same-day'} build, aim for 1:${w}:${w} → ~${fmt(levainFlour / w)} g seed.`;
+
+  if (levainMode === 'auto') {
+    $('levainModeHint').textContent = overnight
+      ? `Auto chose night before — a same-day 6 h build would land at ${formatTime(sched.sameDayLevain)}.`
+      : `Auto chose same day — 6 h build at ${formatTime(sched.levainDate)}.`;
+  } else if (levainMode === 'day' && sched.levainDate.getHours() < 7) {
+    $('levainModeHint').textContent = `This build lands at ${formatTime(sched.levainDate)} — consider Night Before.`;
+  } else {
+    $('levainModeHint').textContent = overnight
+      ? '12 h build in a cool spot (18–21°C), mixed the evening before.'
+      : '6 h build at warm room temp (21–22°C).';
+  }
 
   // ── Alerts ──
   const alerts = [];
@@ -1594,7 +1811,7 @@ function recalc() {
 
   // ── Formulation table ──
   const rows = [
-    { component: 'Park Wheat Starter', sub: 'LEVAIN · ' + ratioStr, weight: levainTotal, pct: levainTotal / TFW * 100, note: 'Peak in 6h @ 21–22°C. Use at flat top.' },
+    { component: 'Park Wheat Starter', sub: 'LEVAIN · ' + ratioStr, weight: levainTotal, pct: levainTotal / TFW * 100, note: levainPeakStr + '. Use at flat top.' },
   ];
   if (ryeFlour > 0) {
     rows.push(
@@ -1640,7 +1857,7 @@ function recalc() {
   }
 
   buildSchedule(sched, { ratioStr, starterG, levainFlour, levainWater, millG, scaldOn, altusOn });
-  buildRehab();
+  buildRehab(sched.bakeDate);
   buildProcessNotes();
   buildRules();
 }
@@ -1649,7 +1866,10 @@ function buildSchedule(sched, ctx) {
   const is95 = currentMode === '95';
 
   $('schedMeta').textContent =
-    `Anchors: 6h Levain Peak · ${sched.coldProofHours}h Cold Proof · Bake ${DAY_SHORT[sched.bakeDate.getDay()]} @ ${formatTime(sched.bakeDate)}`;
+    `Anchors: ${sched.levainWindow}h Levain · ${sched.coldProofHours}h Cold Proof · ` +
+    (anchorMode === 'fridge'
+      ? `Fridge ${DAY_SHORT[sched.fridgeDate.getDay()]} @ ${formatTime(sched.fridgeDate)} → Bake ${DAY_SHORT[sched.bakeDate.getDay()]} @ ${formatTime(sched.bakeDate)}`
+      : `Bake ${DAY_SHORT[sched.bakeDate.getDay()]} @ ${formatTime(sched.bakeDate)}`);
 
   const prepParts = [];
   if (ctx.scaldOn) prepParts.push('Make rye scald');
@@ -1657,8 +1877,9 @@ function buildSchedule(sched, ctx) {
   if (ctx.altusOn) prepParts.push('Prep altus if not ready');
   prepParts.push('Cool everything fully.');
 
+  const overnight = sched.levainResolved === 'overnight';
   const schedRows = [
-    { date: sched.levainDate, step: 'Levain Build', detail: `${fmt(ctx.starterG)}g starter + ${fmt(ctx.levainFlour)}g flour + ${fmt(ctx.levainWater)}g water (${ctx.ratioStr}). Set at 21–22°C. Peak in ~6h — use at flat top.`, cls: '' },
+    { date: sched.levainDate, step: overnight ? 'Levain (Night Before)' : 'Levain Build', detail: `${fmt(ctx.starterG)}g starter + ${fmt(ctx.levainFlour)}g flour + ${fmt(ctx.levainWater)}g water (${ctx.ratioStr}). ${overnight ? 'Cool spot 18–21°C. Peak in ~10–12h — ready at mix time.' : 'Set at 21–22°C. Peak in ~6h.'} Use at flat top.`, cls: '' },
     { date: sched.prepDate, step: 'Prep', detail: prepParts.join(' · '), cls: '' },
     { date: sched.autolyseDate, step: is95 ? 'True Autolyse' : 'Fermentolyse', detail: is95 ? 'Cold Water I + cooled Scald + Park Wheat. Mix until no dry flour. Rest 75–90 min. No levain.' : 'Cold Water I + Levain + cooled Scald + Park Wheat. Mix. Rest 45 min.', cls: '' },
     { date: sched.mixDate, step: 'Final Mix', detail: is95 ? 'Levain dissolved in bassinage water → pour over dough. Add salt + altus. Pincer 3–5 min. Set aliquot jar. Target dough temp 24–25°C.' : 'Add salt + altus + bassinage water. Pincer 3–5 min. Set aliquot jar.', cls: '' },
@@ -1697,12 +1918,8 @@ function buildSchedule(sched, ctx) {
   $('scheduleGrid').innerHTML = html;
 }
 
-function buildRehab() {
+function buildRehab(bakeDate) {
   const state = $('starterState').value;
-  const bakeDayOffset = getBakeDayOffset();
-  const now = new Date();
-  const bakeDate = new Date(now);
-  bakeDate.setDate(now.getDate() + bakeDayOffset);
 
   const protocols = {
     active: {
@@ -1876,9 +2093,14 @@ function resetDefaults() {
   $('altusInputs').style.display = '';
   $('altusPct').value = 5.3;
   $('altusRatio').value = 2;
+  anchorMode = 'fridge';
+  levainMode = 'auto';
   $('bakeDay').value = 1;
   $('bakeTime').value = '09:00';
+  $('fridgeDay').value = 1;
+  $('fridgeTime').value = '16:00';
   $('coldProof').value = 13.5;
+  syncScheduleUI();
   $('phase1Temp').value = 500;
   $('phase1Min').value = 18;
   $('phase2Min').value = 20;
@@ -1889,6 +2111,7 @@ function resetDefaults() {
 
 // Initial render
 labelBakeDayOptions();
+syncScheduleUI();
 recalc();
 </script>
 </body>
