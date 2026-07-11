@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#36B3AF"/>
+  <!-- boule -->
+  <path d="M84 342 A172 150 0 0 1 428 342 Q428 370 400 370 H112 Q84 370 84 342 Z" fill="#FDFAF6"/>
+  <!-- crust shading line -->
+  <path d="M110 330 A146 124 0 0 1 402 330" stroke="#F4EFE8" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- scores -->
+  <path d="M172 252 q28 40 16 92" stroke="#2a9490" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <path d="M254 232 q20 52 10 116" stroke="#2a9490" stroke-width="16" fill="none" stroke-linecap="round"/>
+  <path d="M336 252 q12 46 -6 92" stroke="#2a9490" stroke-width="16" fill="none" stroke-linecap="round"/>
+</svg>
