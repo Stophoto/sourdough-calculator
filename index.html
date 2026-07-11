@@ -397,11 +397,6 @@
     background: var(--cream);
     border: 1px solid var(--cream-border);
     border-radius: 10px;
-    background-image: repeating-linear-gradient(to right,
-      transparent 0,
-      transparent calc(100%/24 - 1px),
-      var(--cream-dark) calc(100%/24 - 1px),
-      var(--cream-dark) calc(100%/24));
   }
 
   .tl-hours {
@@ -437,7 +432,15 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.18);
   }
 
-  .tl-pill span { pointer-events: none; }
+  .tl-pill span { pointer-events: none; position: relative; z-index: 1; }
+
+  .tl-bake-hot {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(60, 25, 5, 0.22);
+    pointer-events: none;
+  }
 
   /* generous touch target beyond the visible pill */
   .tl-pill::after { content: ''; position: absolute; inset: -8px -14px; }
@@ -1513,6 +1516,21 @@
             <span class="unit">°F</span>
           </div>
         </div>
+        <div class="input-row">
+          <span class="input-label">Loaves per Bake</span>
+          <div class="input-field">
+            <input type="number" id="ovenCap" value="2" step="1" min="1" max="6" oninput="recalc()">
+            <span class="unit">×</span>
+          </div>
+        </div>
+        <div class="input-row">
+          <span class="input-label">Reheat Between Bakes</span>
+          <div class="input-field">
+            <input type="number" id="reheatMin" value="45" step="5" min="15" max="90" oninput="recalc()">
+            <span class="unit">min</span>
+          </div>
+        </div>
+        <div class="hint-text">The batch bakes in rounds — the oven goes back to full temp between rounds, and waiting loaves stay in the fridge.</div>
       </div>
 
     </details>
@@ -1535,16 +1553,6 @@
       </div>
     </div>
 
-    <!-- MODE BANNER -->
-    <div id="modeBanner" class="mode-banner v95">
-      <span class="mode-badge" id="modeBadgeText">95/5</span>
-      <span>·</span>
-      <span class="mode-desc" id="modeDescText">Open Crumb Protocol — True autolyse, 2 coil folds, 35–40% bulk rise, moderate shaping tension.</span>
-    </div>
-
-    <!-- ALERTS -->
-    <div id="alertZone"></div>
-
     <!-- TIMELINE -->
     <div class="section-card">
       <div class="section-card-header">
@@ -1552,6 +1560,16 @@
         <span class="section-card-meta" id="tlMeta"></span>
       </div>
       <div class="tl-body" id="tlBody"></div>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="alertZone"></div>
+
+    <!-- MODE BANNER -->
+    <div id="modeBanner" class="mode-banner v95">
+      <span class="mode-badge" id="modeBadgeText">95/5</span>
+      <span>·</span>
+      <span class="mode-desc" id="modeDescText">Open Crumb Protocol — True autolyse, 2 coil folds, 35–40% bulk rise, moderate shaping tension.</span>
     </div>
 
     <!-- STAT CARDS -->
@@ -1840,13 +1858,22 @@ function computeSchedule() {
 
   const p1Min = parseInt($('phase1Min').value) || 18;
   const p2Min = parseInt($('phase2Min').value) || 20;
-  const pullDate = addTime(bakeDate, (p1Min + p2Min) / 60);
+
+  // The oven fits ovenCap loaves per bake, so the batch bakes in rounds:
+  // 1h preheat before round 1, then a reheat back to full temp between
+  // rounds. pullDate marks the end of the LAST bake.
+  const loavesN = Math.min(12, Math.max(1, parseInt($('loaves').value) || 5));
+  const ovenCap = Math.max(1, parseInt($('ovenCap').value) || 2);
+  const numBakes = Math.ceil(loavesN / ovenCap);
+  const bakeH = (p1Min + p2Min) / 60;
+  const reheatH = (parseInt($('reheatMin').value) || 45) / 60;
+  const pullDate = addTime(bakeDate, numBakes * bakeH + (numBakes - 1) * reheatH);
 
   return {
     now, bakeDate, preheatDate, fridgeDate, shapeDate, bulkEndDate,
     fold2Date, fold1Date, mixDate, autolyseDate, prepDate, pullDate,
     levainDate, sameDayLevain, levainResolved, levainWindow,
-    coldProofHours, p1Min, p2Min,
+    coldProofHours, p1Min, p2Min, loavesN, ovenCap, numBakes, bakeH, reheatH,
     p1Temp: $('phase1Temp').value, p2Temp: $('phase2Temp').value, pullTemp: $('pullTemp').value,
   };
 }
@@ -1856,7 +1883,8 @@ function renderKeyTimes(sched) {
     { label: 'Levain Build', date: sched.levainDate },
     { label: 'Start Mix', date: sched.autolyseDate },
     { label: 'Into Fridge', date: sched.fridgeDate, hl: anchorMode === 'bake' },
-    { label: 'Bake', date: sched.bakeDate, hl: anchorMode === 'fridge' },
+    { label: sched.numBakes > 1 ? 'First Bake' : 'Bake', date: sched.bakeDate, hl: anchorMode === 'fridge' },
+    { label: sched.numBakes > 1 ? `Done — ${sched.numBakes} bakes` : 'Done (pull)', date: sched.pullDate },
   ];
   $('keyTimes').innerHTML = rows.map(r => `
     <div class="key-time-row${r.hl ? ' highlight' : ''}${r.date < sched.now ? ' past' : ''}">
@@ -1893,26 +1921,61 @@ function renderTimeline(sched) {
   const B = hrs(sched.bakeDate);
   const handsOn = F - hrs(sched.autolyseDate);
   const bakeDur = hrs(sched.pullDate) - hrs(sched.preheatDate);
+  const lvH = hrs(sched.levainDate);
+  const nowH = hrs(sched.now);
 
-  tlCtx = { day0, F, B, handsOn, bakeDur };
+  // Zoom to daytime: default 5a–10p window, expanded to fit anything
+  // scheduled outside it. Falls back to the full clock if a block crosses
+  // midnight (so nothing gets clipped).
+  const intervals = [[F - handsOn, F], [B - 1, B - 1 + bakeDur]];
+  if (lvH >= 0 && lvH < 48) intervals.push([lvH, lvH + 0.01]);
+  let winStart = 5, winEnd = 22;
+  const crossesMidnight = intervals.some(([a, b]) => Math.floor(a / 24) !== Math.floor((b - 0.001) / 24));
+  if (crossesMidnight) {
+    winStart = 0;
+    winEnd = 24;
+  } else {
+    for (const [a, b] of intervals) {
+      winStart = Math.min(winStart, Math.floor(a % 24));
+      winEnd = Math.max(winEnd, Math.ceil((b - 0.001) % 24 + 0.001));
+    }
+    winStart = Math.max(0, winStart);
+    winEnd = Math.min(24, winEnd);
+  }
+  const span = winEnd - winStart;
 
-  const pct = h => (h / 24) * 100;
-  // split an [a,b] hour span into per-row segments
+  tlCtx = { day0, F, B, handsOn, bakeDur, winStart, span, numBakes: sched.numBakes };
+
+  // split an [a,b] hour span into per-row segments, clipped to the window
   const segs = (a, b) => {
     const out = [];
     for (let r = 0; r < 2; r++) {
-      const lo = Math.max(a, r * 24), hi = Math.min(b, (r + 1) * 24);
-      if (hi - lo > 0.03) out.push({ row: r, left: pct(lo - r * 24), width: pct(hi - lo) });
+      const lo = Math.max(a, r * 24 + winStart), hi = Math.min(b, r * 24 + winEnd);
+      if (hi - lo > 0.03) out.push({ row: r, lo, hi, left: (lo - r * 24 - winStart) / span * 100, width: (hi - lo) / span * 100 });
     }
     return out;
   };
 
   const mixSegs = segs(F - handsOn, F);
   const bakeSegs = segs(B - 1, B - 1 + bakeDur);
-  const lvH = hrs(sched.levainDate);
-  const nowH = hrs(sched.now);
 
-  const hoursHtml = `<div class="tl-hours"><span style="left:0%">12a</span><span style="left:25%">6a</span><span style="left:50%">12p</span><span style="left:75%">6p</span><span style="left:100%">12a</span></div>`;
+  // active-bake intervals (dark stripes) vs preheat/reheat gaps
+  const bakes = [];
+  for (let i = 0; i < sched.numBakes; i++) {
+    const s = B + i * (sched.bakeH + sched.reheatH);
+    bakes.push([s, s + sched.bakeH]);
+  }
+
+  const tickStep = span <= 12 ? 2 : 3;
+  let ticks = '';
+  for (let h = Math.ceil(winStart / tickStep) * tickStep; h <= winEnd; h += tickStep) {
+    const lbl = h === 0 || h === 24 ? '12a' : h === 12 ? '12p' : h < 12 ? h + 'a' : (h - 12) + 'p';
+    ticks += `<span style="left:${(h - winStart) / span * 100}%">${lbl}</span>`;
+  }
+  const hoursHtml = `<div class="tl-hours">${ticks}</div>`;
+
+  const cell = (100 / span).toFixed(4);
+  const gridStyle = `background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(${cell}% - 1px), var(--cream-dark) calc(${cell}% - 1px), var(--cream-dark) ${cell}%)`;
 
   const trackHtml = (row) => {
     let inner = '';
@@ -1920,15 +1983,22 @@ function renderTimeline(sched) {
       inner += `<div class="tl-pill mix" data-kind="mix" style="left:${s.left}%; width:${s.width}%"><span>MIX → FRIDGE</span></div>`;
     }
     for (const s of bakeSegs.filter(s => s.row === row)) {
-      inner += `<div class="tl-pill bake" data-kind="bake" style="left:${s.left}%; width:${s.width}%"><span>BAKE</span></div>`;
+      let stripes = '';
+      for (const [bs, be] of bakes) {
+        const o1 = Math.max(s.lo, bs), o2 = Math.min(s.hi, be);
+        if (o2 - o1 > 0.02) {
+          stripes += `<div class="tl-bake-hot" style="left:${(o1 - s.lo) / (s.hi - s.lo) * 100}%; width:${(o2 - o1) / (s.hi - s.lo) * 100}%"></div>`;
+        }
+      }
+      inner += `<div class="tl-pill bake" data-kind="bake" style="left:${s.left}%; width:${s.width}%">${stripes}<span>BAKE${sched.numBakes > 1 ? ' ×' + sched.numBakes : ''}</span></div>`;
     }
-    if (lvH >= 0 && lvH < 48 && Math.floor(lvH / 24) === row) {
-      inner += `<div class="tl-marker" title="Levain build ${formatTime(sched.levainDate)}" style="left:${pct(lvH - row * 24)}%"></div>`;
+    if (lvH >= row * 24 + winStart && lvH < row * 24 + winEnd) {
+      inner += `<div class="tl-marker" title="Levain build ${formatTime(sched.levainDate)}" style="left:${(lvH - row * 24 - winStart) / span * 100}%"></div>`;
     }
-    if (nowH >= 0 && nowH < 48 && Math.floor(nowH / 24) === row) {
-      inner += `<div class="tl-now" title="Now" style="left:${pct(nowH - row * 24)}%"></div>`;
+    if (nowH >= row * 24 + winStart && nowH < row * 24 + winEnd) {
+      inner += `<div class="tl-now" title="Now" style="left:${(nowH - row * 24 - winStart) / span * 100}%"></div>`;
     }
-    return `<div class="tl-track" data-row="${row}">${inner}</div>${hoursHtml}`;
+    return `<div class="tl-track" data-row="${row}" style="${gridStyle}">${inner}</div>${hoursHtml}`;
   };
 
   const dayName = i => DAY_FULL[tlAxisDate(day0, i * 24).getDay()].toUpperCase();
@@ -1949,7 +2019,8 @@ function renderTimeline(sched) {
   body.querySelectorAll('.tl-pill').forEach(p => p.addEventListener('pointerdown', tlPointerDown));
 
   $('tlMeta').textContent =
-    `Hands-on block ${fmtDur(handsOn)} · Levain ${DAY_SHORT[sched.levainDate.getDay()]} ${formatTime(sched.levainDate)}`;
+    `Hands-on block ${fmtDur(handsOn)} · Levain ${DAY_SHORT[sched.levainDate.getDay()]} ${formatTime(sched.levainDate)}` +
+    (sched.numBakes > 1 ? ` · ${sched.numBakes} bakes × ${sched.ovenCap} loaves` : '');
 }
 
 // Connector, cold-proof chip, and captions — updated live during a drag
@@ -1959,7 +2030,7 @@ function tlUpdateDecor(F, B) {
   const cpStr = String(Math.round(CP * 100) / 100);
   const atLimit = CP <= 12.01 || CP >= 17.99;
 
-  const x = h => (h % 24) / 24 * 1000;
+  const x = h => ((h % 24) - tlCtx.winStart) / tlCtx.span * 1000;
   const x1 = x(F), x2 = x(B - 1);
   const y1 = F < 24 ? 0 : 34;
   const y2 = (B - 1) < 24 ? 0 : 34;
@@ -1973,7 +2044,9 @@ function tlUpdateDecor(F, B) {
   chip.classList.toggle('limit', atLimit);
 
   $('tlCap1').textContent = `Mix ${formatTime(tlAxisDate(day0, F - handsOn))} → Fridge ${formatTime(tlAxisDate(day0, F))}`;
-  $('tlCap2').textContent = `Preheat ${formatTime(tlAxisDate(day0, B - 1))} · Bake ${formatTime(tlAxisDate(day0, B))} · Pull ${formatTime(tlAxisDate(day0, B - 1 + bakeDur))}`;
+  $('tlCap2').textContent = tlCtx.numBakes > 1
+    ? `Preheat ${formatTime(tlAxisDate(day0, B - 1))} · First bake ${formatTime(tlAxisDate(day0, B))} · Done ${formatTime(tlAxisDate(day0, B - 1 + bakeDur))}`
+    : `Preheat ${formatTime(tlAxisDate(day0, B - 1))} · Bake ${formatTime(tlAxisDate(day0, B))} · Pull ${formatTime(tlAxisDate(day0, B - 1 + bakeDur))}`;
 }
 
 function tlPointerDown(e) {
@@ -1997,26 +2070,33 @@ function tlPointerDown(e) {
 
 function tlPointerMove(e) {
   if (!tlDrag) return;
-  const dH = (e.clientX - tlDrag.x0) / tlDrag.trackW * 24;
+  const { winStart, span, handsOn, bakeDur } = tlCtx;
+  const winEnd = winStart + span;
+  const dH = (e.clientX - tlDrag.x0) / tlDrag.trackW * span;
   if (Math.abs(dH) > 0.02) tlDrag.moved = true;
   const snap = h => Math.round(h * 4) / 4; // 15-minute grid
   let F, B;
   if (tlDrag.kind === 'mix') {
     // translate both pills together, proof preserved
     const CP0 = tlDrag.B0 - tlDrag.F0 - 1;
-    F = Math.min(28, Math.max(0.5, snap(tlDrag.F0 + dH)));
+    F = Math.min(winEnd, Math.max(winStart + handsOn, snap(tlDrag.F0 + dH)));
     B = F + CP0 + 1;
   } else {
     // stretch the proof within 12–18h, then pull the mix pill along
-    B = Math.min(47.5, Math.max(13.5, snap(tlDrag.B0 + dH)));
+    B = snap(tlDrag.B0 + dH);
+    B = Math.min(24 + winEnd + 1 - bakeDur, Math.max(winStart + handsOn + 13, B));
     const CP = Math.min(18, Math.max(12, B - tlDrag.F0 - 1));
     F = B - CP - 1;
+    if (F < winStart + handsOn) {
+      F = winStart + handsOn;
+      B = Math.max(F + 13, Math.min(F + 19, B));
+    }
   }
   tlDrag.F = F;
   tlDrag.B = B;
 
-  const txMix = (F - tlDrag.F0) / 24 * tlDrag.trackW;
-  const txBake = (B - tlDrag.B0) / 24 * tlDrag.trackW;
+  const txMix = (F - tlDrag.F0) / span * tlDrag.trackW;
+  const txBake = (B - tlDrag.B0) / span * tlDrag.trackW;
   document.querySelectorAll('#tlBody .tl-pill.mix').forEach(p => p.style.transform = `translateX(${txMix}px)`);
   document.querySelectorAll('#tlBody .tl-pill.bake').forEach(p => p.style.transform = `translateX(${txBake}px)`);
   tlUpdateDecor(F, B);
@@ -2227,6 +2307,12 @@ function recalc() {
   if ((parseFloat($('coldProof').value) || 13.5) > 18) {
     alerts.push({ type: 'warn', msg: 'Cold proof exceeds 18-hour hard ceiling.', sub: 'Protease enzymes do not stop at fridge temp. Structural collapse (Frisbee Effect) becomes highly probable.' });
   }
+  if (sched.numBakes > 1) {
+    const extraWait = (sched.numBakes - 1) * (sched.bakeH + sched.reheatH);
+    if (sched.coldProofHours + extraWait > 18) {
+      alerts.push({ type: 'warn', msg: `Final bake's loaves will hit ~${(sched.coldProofHours + extraWait).toFixed(1)} h of cold proof.`, sub: `${sched.numBakes} bakes back-to-back keep the last loaves in the fridge ${extraWait.toFixed(1)} h longer than the first. Keep the total under 18 h — shorten the base cold proof.` });
+    }
+  }
   if (hydrationTarget > 0.88) {
     alerts.push({ type: 'warn', msg: 'Hydration above 88% — extreme territory.', sub: 'Ensure altus is enabled and bassinage reserve is maximized.' });
   }
@@ -2322,8 +2408,21 @@ function buildSchedule(sched, ctx) {
     { date: sched.shapeDate, step: 'Shape', detail: `Preshape → 20 min bench rest → final shape. ${is95 ? 'MODERATE tension.' : 'HIGH tension.'} Dust bannetons with rice flour. Seam-side up.`, cls: '' },
     { date: sched.fridgeDate, step: 'Into Fridge', detail: `Cold proof begins. ${sched.coldProofHours}h at 3–4°C. Sweet spot: 13.5h. Max: 18h. Hard ceiling — do not exceed.`, cls: 'critical' },
     { date: sched.preheatDate, step: 'Preheat', detail: `${sched.p1Temp}°F (260°C). Full 1 hour — no shortcuts.`, cls: 'bake' },
-    { date: sched.bakeDate, step: 'Bake', detail: `Score deep (1cm+, 30° angle). Covered ${sched.p1Min}min @ ${sched.p1Temp}°F → uncovered ${sched.p2Min}min @ ${sched.p2Temp}°F. Bake to dark chestnut.`, cls: 'bake' },
-    { date: sched.pullDate, step: 'Pull', detail: `Internal temp ~${sched.pullTemp}°F. Do not fight the Calgary altitude stall. When it hits ${sched.pullTemp}°F, pull. Cool on rack minimum 6 hours — ideally overnight.`, cls: 'bake' },
+  );
+
+  for (let i = 0; i < sched.numBakes; i++) {
+    const start = addTime(sched.bakeDate, i * (sched.bakeH + sched.reheatH));
+    const lo = i * sched.ovenCap + 1;
+    const hi = Math.min((i + 1) * sched.ovenCap, sched.loavesN);
+    const loafStr = sched.numBakes > 1 ? (lo === hi ? `Loaf ${lo}` : `Loaves ${lo}–${hi}`) + '. Straight from the fridge. ' : '';
+    schedRows.push({ date: start, step: sched.numBakes > 1 ? `Bake ${i + 1} of ${sched.numBakes}` : 'Bake', detail: `${loafStr}Score deep (1cm+, 30° angle). Covered ${sched.p1Min}min @ ${sched.p1Temp}°F → uncovered ${sched.p2Min}min @ ${sched.p2Temp}°F. Bake to dark chestnut.`, cls: 'bake' });
+    if (i < sched.numBakes - 1) {
+      schedRows.push({ date: addTime(start, sched.bakeH), step: 'Pull + Reheat', detail: `Pull at ~${sched.pullTemp}°F internal. Oven back to ${sched.p1Temp}°F — ~${Math.round(sched.reheatH * 60)} min. Waiting loaves stay in the fridge.`, cls: '' });
+    }
+  }
+
+  schedRows.push(
+    { date: sched.pullDate, step: sched.numBakes > 1 ? 'Final Pull' : 'Pull', detail: `Internal temp ~${sched.pullTemp}°F. Do not fight the Calgary altitude stall. When it hits ${sched.pullTemp}°F, pull. Cool on rack minimum 6 hours — ideally overnight.`, cls: 'bake' },
   );
 
   let prevDay = '';
@@ -2534,6 +2633,8 @@ function resetDefaults() {
   $('phase1Min').value = 18;
   $('phase2Min').value = 20;
   $('pullTemp').value = 205;
+  $('ovenCap').value = 2;
+  $('reheatMin').value = 45;
   $('starterState').value = 'fridge_long';
   setMode('95'); // also resets rye % + phase 2 temp, then recalcs
 }
